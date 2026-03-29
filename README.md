@@ -45,14 +45,6 @@ docker compose up --build
 
 Open: http://localhost:8080
 
-## Container Registry (GHCR)
-
-```bash
-docker build -t ghcr.io/furkankoykiran/earthquake-sim:latest .
-docker login ghcr.io
-docker push ghcr.io/furkankoykiran/earthquake-sim:latest
-```
-
 ## Configuration
 
 - Port and host settings are defined in `vite.config.js`.
