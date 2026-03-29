@@ -68,8 +68,8 @@ See `MODELS-GUIDE.md` for sourcing and integrating 3D models.
 - `index.html`: UI layout and scenario copy
 - `main.js`: core simulation logic
 - `styles/style.css`: UI styling
-- `assets/3D`: 3D models used by the scene
-- `assets/hdri`: environment lighting
+- `public/assets/3D`: 3D models used by the scene
+- `public/assets/hdri`: environment lighting
 
 ## Best Practices
 

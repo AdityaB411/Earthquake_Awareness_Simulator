@@ -4,20 +4,21 @@ This guide explains how to source, convert, and integrate 3D models used in the 
 
 ## Model File Structure
 
-All models should be stored in `assets/3D/` as GLB files:
+All models should be stored in `public/assets/3D/` as GLB files:
 
 ```
-assets/
-└── 3D/
-    ├── office_desk.glb
-    ├── computer_monitor.glb
-    ├── mouse_and_keyboard.glb
-    ├── office_chair.glb
-    ├── chair.glb
-    ├── majesty_palm_plant.glb
-    ├── electrical_panel.glb
-    ├── exit_box.glb
-    └── simple_heater.glb
+public/
+└── assets/
+    └── 3D/
+        ├── office_desk.glb
+        ├── computer_monitor.glb
+        ├── mouse_and_keyboard.glb
+        ├── office_chair.glb
+        ├── chair.glb
+        ├── majesty_palm_plant.glb
+        ├── electrical_panel.glb
+        ├── exit_box.glb
+        └── simple_heater.glb
 ```
 
 ## Recommended Sources
@@ -33,7 +34,7 @@ Always review license terms before use.
 If the model is not GLB:
 1. `File > Import` and select the model
 2. `File > Export > glTF 2.0 (.glb/.gltf)`
-3. Save into `assets/3D/`
+3. Save into `public/assets/3D/`
 
 ## Model Placement (main.js)
 
