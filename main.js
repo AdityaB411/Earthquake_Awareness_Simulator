@@ -148,7 +148,8 @@ function updateFirstPersonMovement(delta) {
 
   if (coverActive && coverTarget) {
     // Keep the player tucked under cover while crouched
-    camera.position.lerp(coverTarget, delta * 3.0);
+    camera.position.x = coverTarget.x;
+    camera.position.z = coverTarget.z;
     camera.position.y = EYE_HEIGHT_CROUCH;
     return;
   }
@@ -239,8 +240,9 @@ const AmbientOcclusion = false;
 const SHADOWS_ENABLED = false;
 const ENV_REFLECTION_ENABLED = false;
 
-const loader = new GLTFLoader().setPath("/assets/3D/");
-const hdriLoader = new RGBELoader().setPath("/assets/hdri/");
+const assetBase = import.meta.env.BASE_URL ?? "./";
+const loader = new GLTFLoader().setPath(`${assetBase}assets/3D/`);
+const hdriLoader = new RGBELoader().setPath(`${assetBase}assets/hdri/`);
 
 // ==================== MODEL YUKLEME ====================
 const REALISTIC_MODELS = {
@@ -758,10 +760,12 @@ function takeCover() {
     coverActive = true;
     coverStartTime = Date.now();
     coverUsed = true;
-    if (shelterZone.userData.coverPoint) {
-      coverTarget = shelterZone.userData.coverPoint.clone();
-      camera.position.lerp(coverTarget, 0.6);
-    }
+    coverTarget = new THREE.Vector3(
+      camera.position.x,
+      EYE_HEIGHT_CROUCH,
+      camera.position.z
+    );
+    camera.position.y = EYE_HEIGHT_CROUCH;
 
     if (activeQuake && !activeQuake.coverScored) {
       const responseTime = (Date.now() - scenarioStartTime) / 1000 - activeQuake.start;
