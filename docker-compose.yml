@@ -1,0 +1,13 @@
+services:
+  earthquake-sim:
+    build: .
+    container_name: earthquake-sim
+    ports:
+      - "5173:5173"
+    # Geliştirme sırasında canlı kod güncellemesi için proje klasörünü mount et
+    volumes:
+      - .:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+    command: ["npx", "vite", "--host", "0.0.0.0", "--port", "5173"]

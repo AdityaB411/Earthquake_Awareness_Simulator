@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <title>3D Deprem Eğitim Simülatörü</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0" />
+  <link type="text/css" rel="stylesheet" href="/styles/style.css" />
+</head>
+
+<body>
+  <div id="ui-container">
+    <!-- Crosshair / Nişangah -->
+    <div id="crosshair" style="
+          position: fixed;
+          top: 50%;
+          left: 50%;
+          width: 10px;
+          height: 10px;
+          background-color: rgba(255, 255, 255, 0.8);
+          border: 1px solid black;
+          border-radius: 50%;
+          transform: translate(-50%, -50%);
+          pointer-events: none;
+          z-index: 999;
+          box-shadow: 0 0 4px rgba(0,0,0,0.5);
+          display: none;
+        "></div>
+    <div id="title">
+      <h1>3D Deprem Acil Durum Eğitim Simülatörü</h1>
+    </div>
+
+    <div id="instructions" class="collapsed">
+      <h3 id="instructionsToggle" style="cursor: pointer; user-select: none; margin-bottom: 0">
+        📋 Senaryo:
+        <span id="toggleIcon" style="float: right; font-size: 14px">▼</span>
+      </h3>
+      <div id="instructionsContent">
+        <p style="font-style: italic; color: #ffaa00">
+          Ofis ortamında <strong>ani bir deprem</strong> meydana geliyor.
+        </p>
+        <h4>Ne Yapacaksınız?</h4>
+        <p><strong>1.</strong> Hemen sağlam bir nesnenin altına/yanına geçin.</p>
+        <p><strong>2.</strong> Masanin cevresine gelip [E] ile korunma pozisyonu alin.</p>
+        <p><strong>3.</strong> Sarsıntı boyunca korunmada kalın.</p>
+        <p><strong>4.</strong> Artçı sarsıntılara hazırlıklı olun.</p>
+        <p><strong>5.</strong> Sarsıntı bitince güvenli çıkışa yönelin.</p>
+        <p><strong>DİKKAT:</strong> Hafif ve dengesiz objeler devrilebilir.</p>
+      </div>
+    </div>
+
+    <div id="timer" style="
+          position: fixed;
+          top: 70px;
+          right: 20px;
+          background: rgba(0, 0, 0, 0.9);
+          color: #00ff00;
+          padding: 10px 20px;
+          border-radius: 8px;
+          border: 2px solid #00ff00;
+          font-size: 16px;
+          font-weight: bold;
+          pointer-events: none;
+          display: none;
+          z-index: 100;
+        ">
+      Geçen Süre: 0.0s
+    </div>
+
+    <!-- Kontrol Bilgilendirme Ekranı -->
+    <div id="controls-intro" style="
+          position: fixed;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          background: rgba(26, 26, 46, 0.95);
+          border: 4px solid #4caf50;
+          border-radius: 20px;
+          padding: 40px;
+          color: white;
+          z-index: 200;
+          display: none; /* JS ile açılacak */
+          text-align: center;
+          max-width: 600px;
+          width: 90%;
+          box-shadow: 0 0 50px rgba(0,0,0,0.8);
+        ">
+      <h2 style="color: #4caf50; font-size: 32px; margin-bottom: 30px; text-transform: uppercase;">Simülasyon
+        Kontrolleri</h2>
+
+      <div style="display: flex; justify-content: space-around; margin-bottom: 40px; flex-wrap: wrap; gap: 20px;">
+        <!-- WASD -->
+        <div style="text-align: center;">
+          <div style="font-size: 40px; margin-bottom: 10px;">⌨️</div>
+          <div style="font-weight: bold; color: #ffaa00; font-size: 24px;">W A S D</div>
+          <div style="color: #aaa;">Hareket Et</div>
+        </div>
+
+        <!-- MOUSE -->
+        <div style="text-align: center;">
+          <div style="font-size: 40px; margin-bottom: 10px;">🖱️</div>
+          <div style="font-weight: bold; color: #ffaa00; font-size: 24px;">MOUSE</div>
+          <div style="color: #aaa;">Çevreyi İncele</div>
+        </div>
+
+        <!-- E KEY -->
+        <div style="text-align: center;">
+          <div style="font-size: 40px; margin-bottom: 10px;">👉</div>
+          <div style="font-weight: bold; color: #ffaa00; font-size: 24px;">[ E ] TUŞU</div>
+          <div style="color: #aaa;">Etkileşim / Seçim</div>
+        </div>
+      </div>
+
+      <div
+        style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px; margin-bottom: 30px; font-style: italic;">
+        <p>İpucu: Sağlam nesnelerin yanında kalın ve korunma alın.</p>
+      </div>
+
+      <div style="margin-bottom: 30px; display: flex; gap: 15px; justify-content: center;">
+        <input type="text" id="userName" placeholder="Adınız" style="
+          padding: 15px;
+          border-radius: 10px;
+          border: 2px solid #4caf50;
+          background: rgba(255, 255, 255, 0.9);
+          color: #333;
+          font-size: 16px;
+          width: 45%;
+        ">
+        <input type="text" id="userSurname" placeholder="Soyadınız" style="
+          padding: 15px;
+          border-radius: 10px;
+          border: 2px solid #4caf50;
+          background: rgba(255, 255, 255, 0.9);
+          color: #333;
+          font-size: 16px;
+          width: 45%;
+        ">
+      </div>
+
+      <button onclick="validateAndStart()" style="
+            background: linear-gradient(145deg, #4caf50, #45a049);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            padding: 15px 40px;
+            font-size: 20px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+          " onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+        ✅ Kullanımı Anladım
+      </button>
+    </div>
+
+    <!-- Senaryo Başlat Butonu -->
+    <div id="startScenarioBtn" style="
+          position: fixed;
+          top: 45%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          pointer-events: auto;
+          display: none;
+          z-index: 150;
+        ">
+      <button onclick="window.earthquakeSimulation.startScenario()" style="
+            background: linear-gradient(145deg, #4caf50, #45a049);
+            color: white;
+            border: 4px solid #ffffff;
+            border-radius: 15px;
+            padding: 25px 45px;
+            font-size: 24px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 8px 20px rgba(76, 175, 80, 0.6);
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+          " onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+        ▶️ Senaryoyu Başlat
+      </button>
+    </div>
+
+    <div id="messageBox" style="
+          position: fixed;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          background: rgba(0, 0, 0, 0.95);
+          color: white;
+          padding: 20px 40px;
+          border-radius: 15px;
+          border: 3px solid #ffaa00;
+          font-size: 18px;
+          font-weight: bold;
+          text-align: center;
+          max-width: 500px;
+          z-index: 200;
+          display: none;
+          pointer-events: none;
+          box-shadow: 0 0 30px rgba(255, 170, 0, 0.8);
+        "></div>
+
+    <div id="quakeStatus">Deprem Durumu: Beklemede</div>
+
+    <div id="info">Web Tabanlı 3D Deprem Eğitimi | ISG Simülasyonu</div>
+  </div>
+
+  <!-- Sonuç Ekranı -->
+  <div id="resultScreen" style="
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.95);
+        z-index: 300;
+        display: none;
+        overflow-y: auto;
+      ">
+    <div style="
+          max-width: 800px;
+          margin: 50px auto;
+          background: #1a1a2e;
+          padding: 40px;
+          border-radius: 20px;
+          border: 3px solid #4caf50;
+        ">
+      <h1 id="resultTitle" style="text-align: center; font-size: 32px; margin-bottom: 20px">
+        Sonuç
+      </h1>
+
+      <p id="resultText" style="
+            font-size: 18px;
+            text-align: center;
+            margin: 20px 0;
+            line-height: 1.6;
+            color: #ddd;
+          "></p>
+
+      <div style="display: flex; justify-content: space-around; margin: 30px 0">
+        <div style="
+              background: rgba(255, 255, 255, 0.1);
+              padding: 20px;
+              border-radius: 10px;
+              text-align: center;
+            ">
+          <h3 style="color: #ffaa00">Puan</h3>
+          <p id="scoreText" style="font-size: 24px; font-weight: bold"></p>
+        </div>
+
+        <div style="
+              background: rgba(255, 255, 255, 0.1);
+              padding: 20px;
+              border-radius: 10px;
+              text-align: center;
+            ">
+          <h3 style="color: #4af">Süre</h3>
+          <p id="timeText" style="font-size: 24px; font-weight: bold"></p>
+        </div>
+      </div>
+
+      <div id="decisionLog" style="
+            background: rgba(0, 0, 0, 0.5);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            max-height: 300px;
+            overflow-y: auto;
+            color: #ddd;
+          "></div>
+
+      <div style="text-align: center; margin-top: 30px">
+        <button onclick="location.reload()" style="
+              background: linear-gradient(145deg, #4caf50, #45a049);
+              color: white;
+              border: none;
+              border-radius: 10px;
+              padding: 15px 40px;
+              font-size: 18px;
+              font-weight: bold;
+              cursor: pointer;
+              transition: transform 0.2s;
+            " onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+          🔄 Tekrar Dene
+        </button>
+      </div>
+
+      <div style="
+            margin-top: 30px;
+            padding: 20px;
+            background: rgba(76, 175, 80, 0.1);
+            border-left: 4px solid #4caf50;
+            border-radius: 5px;
+            color: #ddd;
+          ">
+        <h4 style="color: #4caf50">📚 Öğrenilenler:</h4>
+        <ul style="line-height: 1.8">
+          <li>Deprem anında sağlam nesnelerin yanında kalın</li>
+          <li>Korunma pozisyonunu erken almak yaralanma riskini azaltır</li>
+          <li>Artçı sarsıntılar beklenir, aceleyle hareket etmeyin</li>
+          <li>Devrilen nesnelerden uzak durun</li>
+          <li>Sarsıntı bitince kontrollü şekilde çıkışa yönelin</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <script type="importmap">
+      {
+        "imports": {
+          "three": "../build/three.module.js",
+          "three/addons/": "./jsm/"
+        }
+      }
+    </script>
+
+  <script type="module" src="/main.js"></script>
+
+  <script>
+    // Senaryo penceresi açılır-kapanır özelliği
+    document.addEventListener("DOMContentLoaded", function () {
+      const instructionsDiv = document.getElementById("instructions");
+      const toggleButton = document.getElementById("instructionsToggle");
+
+      if (toggleButton && instructionsDiv) {
+        toggleButton.addEventListener("click", function () {
+          instructionsDiv.classList.toggle("collapsed");
+        });
+      }
+    });
+  </script>
+</body>
+
+</html>
