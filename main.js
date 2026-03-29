@@ -23,12 +23,16 @@ let currentInteractable = null;
 let interactionHintDiv;
 let handsGroup;
 let shelterZone;
+let coverTarget = null;
+let awaitingExit = false;
+const noCoverZones = [];
 
 const clock = new THREE.Clock();
 let deltaTime;
 
 // Goz hizasi sabit yuksekligi (metre cinsinden)
 const EYE_HEIGHT = 1.6;
+const EYE_HEIGHT_CROUCH = 1.05;
 
 // ==================== FPS HAREKET KONTROLLERI (WASD) ====================
 const moveState = {
@@ -56,6 +60,12 @@ function onKeyDown(event) {
       break;
     case "KeyE":
       if (event.repeat) return;
+      if (coverActive) {
+        coverActive = false;
+        coverTarget = null;
+        showMessage("Korunmadan ciktiniz", 1000);
+        return;
+      }
       if (isCameraInShelter()) {
         takeCover();
         return;
@@ -136,6 +146,13 @@ function clampInsideRoom(position) {
 function updateFirstPersonMovement(delta) {
   if (!controls.isLocked) return;
 
+  if (coverActive && coverTarget) {
+    // Keep the player tucked under cover while crouched
+    camera.position.lerp(coverTarget, delta * 3.0);
+    camera.position.y = EYE_HEIGHT_CROUCH;
+    return;
+  }
+
   if (
     !moveState.forward &&
     !moveState.backward &&
@@ -166,7 +183,7 @@ function updateFirstPersonMovement(delta) {
 
   camera.position.add(velocity);
   clampInsideRoom(camera.position);
-  camera.position.y = EYE_HEIGHT;
+  camera.position.y = coverActive ? EYE_HEIGHT_CROUCH : EYE_HEIGHT;
 }
 
 // ==================== SES SISTEMI ====================
@@ -366,7 +383,7 @@ function buildQuakeTimeline() {
   totalQuakeDuration = 0;
 
   const mainStart = 2.0;
-  const mainMagnitude = randomRange(5.2, 7.8);
+  const mainMagnitude = randomRange(5.9, 7.9);
   const mainDuration = randomRange(12, 24);
 
   quakeTimeline.push({
@@ -399,8 +416,8 @@ function buildQuakeTimeline() {
 
 function getMagnitudeScale(magnitude) {
   const normalized = (magnitude - 4.0) / 4.0;
-  const scaled = normalized * 1.0 + 0.1;
-  return THREE.MathUtils.clamp(scaled, 0.2, 1.0);
+  const scaled = normalized * 1.1 + 0.15;
+  return THREE.MathUtils.clamp(scaled, 0.3, 1.1);
 }
 
 function startQuake(event) {
@@ -486,7 +503,17 @@ function updateEarthquake(delta) {
   updateCoverState();
 
   if (timerStarted && !activeQuake && quakeTimeline.length === 0) {
-    endScenario("success");
+    if (!awaitingExit) {
+      awaitingExit = true;
+      coverActive = false;
+      coverTarget = null;
+      showMessage("Sarsinti bitti. Cikis kapisindan odayi terk edin.", 5000);
+      logDecision("exit_instruction", "Sarsinti sonrasi cikis talimati verildi");
+    }
+
+    if (camera.position.z > 3.0) {
+      endScenario("success");
+    }
   }
 }
 
@@ -508,16 +535,16 @@ function applyCameraShake(intensity, time) {
   camera.rotation.y -= cameraShake.rot.y;
   camera.rotation.z -= cameraShake.rot.z;
 
-  const baseAmount = 0.015 + intensity * 0.035;
+  const baseAmount = 0.025 + intensity * 0.05;
   cameraShake.pos.set(
     Math.sin(time * 12.0) * baseAmount,
     Math.sin(time * 18.0) * baseAmount * 0.6,
     Math.cos(time * 10.0) * baseAmount
   );
   cameraShake.rot.set(
-    Math.sin(time * 8.0) * 0.006 * intensity,
-    Math.cos(time * 6.0) * 0.005 * intensity,
-    Math.sin(time * 9.0) * 0.004 * intensity
+    Math.sin(time * 8.0) * 0.008 * intensity,
+    Math.cos(time * 6.0) * 0.007 * intensity,
+    Math.sin(time * 9.0) * 0.006 * intensity
   );
 
   camera.position.add(cameraShake.pos);
@@ -573,7 +600,7 @@ function applyObjectShake(intensity, time, delta) {
     }
 
     const massFactor = 1 / Math.max(1.0, data.mass);
-    const shakeStrength = intensity * massFactor * 1.4;
+    const shakeStrength = intensity * massFactor * 2.1;
     const t = time + data.seed;
 
     data.shakeOffset.set(
@@ -593,8 +620,8 @@ function applyObjectShake(intensity, time, delta) {
     object.rotation.z += data.shakeRotation.z;
 
     const toppleRisk = intensity * (1 - data.stability);
-    const toppleChance = 0.008 + toppleRisk * 0.05;
-    if (data.allowTopple && toppleRisk > 0.55 && Math.random() < toppleChance) {
+    const toppleChance = 0.012 + toppleRisk * 0.08;
+    if (data.allowTopple && toppleRisk > 0.48 && Math.random() < toppleChance) {
       data.toppled = true;
       data.velocity.set(
         (Math.random() - 0.5) * 0.6,
@@ -616,8 +643,8 @@ function applyObjectShake(intensity, time, delta) {
 function updateToppledObject(object, data, delta) {
   const gravity = -9.0;
   data.velocity.y += gravity * delta;
-  data.velocity.x *= 0.98;
-  data.velocity.z *= 0.98;
+  data.velocity.x *= 0.9;
+  data.velocity.z *= 0.9;
   object.position.addScaledVector(data.velocity, delta);
 
   object.rotation.x += data.rotationVelocity.x * delta;
@@ -693,6 +720,7 @@ function updateCoverState() {
 
   if (!inZone && coverActive) {
     coverActive = false;
+    coverTarget = null;
     showMessage("Korunmadan ciktiniz", 1000);
   }
 }
@@ -700,10 +728,27 @@ function updateCoverState() {
 function isCameraInShelter() {
   if (!shelterZone) return false;
   const box = new THREE.Box3().setFromObject(shelterZone);
-  return box.containsPoint(camera.position);
+  if (!box.containsPoint(camera.position)) return false;
+  const reason = getNoCoverReason();
+  return !reason;
+}
+
+function getNoCoverReason() {
+  for (const zone of noCoverZones) {
+    if (zone.box.containsPoint(camera.position)) {
+      return zone.label;
+    }
+  }
+  return "";
 }
 
 function takeCover() {
+  const noCoverReason = getNoCoverReason();
+  if (noCoverReason) {
+    showMessage(`${noCoverReason} cevresinde korunma yapilamaz.`, 2000);
+    return;
+  }
+
   if (!shelterZone || !isCameraInShelter()) {
     showMessage("Korunma alani icinde degilsiniz", 1500);
     return;
@@ -713,6 +758,10 @@ function takeCover() {
     coverActive = true;
     coverStartTime = Date.now();
     coverUsed = true;
+    if (shelterZone.userData.coverPoint) {
+      coverTarget = shelterZone.userData.coverPoint.clone();
+      camera.position.lerp(coverTarget, 0.6);
+    }
 
     if (activeQuake && !activeQuake.coverScored) {
       const responseTime = (Date.now() - scenarioStartTime) / 1000 - activeQuake.start;
@@ -775,7 +824,12 @@ function updateStatus() {
     return;
   }
 
-  if (activeQuake) {
+  if (awaitingExit) {
+    statusDiv.textContent = "Sarsinti bitti. Cikis kapisindan odayi terk edin.";
+    statusDiv.style.color = "#00ff99";
+    statusDiv.style.borderColor = "#00ff99";
+    statusDiv.style.animation = "none";
+  } else if (activeQuake) {
     const label = activeQuake.label === "artci" ? "ARTCI" : "ANA";
     statusDiv.textContent = `${label} DEPREM! M${activeQuake.magnitude.toFixed(
       1
@@ -801,6 +855,7 @@ function endScenario(result) {
 
   scenarioEnded = true;
   timerStarted = false;
+  awaitingExit = false;
 
   const timerDiv = document.getElementById("timer");
   if (timerDiv) timerDiv.style.display = "none";
@@ -1294,20 +1349,20 @@ async function createRoom() {
   }
 
   registerPhysicsObject(monitor, {
-    mass: 4,
-    stability: 0.25,
+    mass: 3.5,
+    stability: 0.2,
     allowTopple: true,
     label: "Monitor",
   });
   registerPhysicsObject(keyboard, {
-    mass: 2,
-    stability: 0.45,
+    mass: 1.8,
+    stability: 0.4,
     allowTopple: true,
     label: "Klavye",
   });
   registerPhysicsObject(computerMouse, {
-    mass: 1.2,
-    stability: 0.4,
+    mass: 1.1,
+    stability: 0.35,
     allowTopple: true,
     label: "Mouse",
   });
@@ -1353,15 +1408,16 @@ async function createRoom() {
   if (loadedModels.plant) {
     room.add(loadedModels.plant);
     registerPhysicsObject(loadedModels.plant, {
-      mass: 4,
-      stability: 0.3,
+      mass: 3.5,
+      stability: 0.25,
       allowTopple: true,
       label: "Bitki",
     });
   }
 
+  let heater = null;
   if (loadedModels.heater) {
-    const heater = loadedModels.heater;
+    heater = loadedModels.heater;
     heater.name = "heater";
     room.add(heater);
     registerPhysicsObject(heater, {
@@ -1372,6 +1428,7 @@ async function createRoom() {
     });
   } else {
     const fallbackHeater = createFallbackHeater();
+    heater = fallbackHeater;
     registerPhysicsObject(fallbackHeater, {
       mass: 10,
       stability: 0.55,
@@ -1380,11 +1437,16 @@ async function createRoom() {
     });
   }
 
+  let electricalPanel = null;
   if (loadedModels.electricalPanel) {
-    room.add(loadedModels.electricalPanel);
+    electricalPanel = loadedModels.electricalPanel;
+    room.add(electricalPanel);
   } else {
-    createElectricalPanel();
+    electricalPanel = createElectricalPanel();
   }
+
+  registerNoCoverZone(heater, { x: 0.7, y: 1.2, z: 0.7 }, "Isitici");
+  registerNoCoverZone(electricalPanel, { x: 0.6, y: 1.0, z: 0.6 }, "Elektrik panosu");
 
   scene.add(room);
 }
@@ -1399,8 +1461,8 @@ function createShelterZoneForObject(object) {
   box.getCenter(center);
 
   const zoneHeight = Math.max(2.0, size.y * 1.2);
-  const zoneWidth = Math.max(1.4, size.x + 1.2);
-  const zoneDepth = Math.max(1.2, size.z + 1.2);
+  const zoneWidth = Math.max(1.3, size.x + 0.9);
+  const zoneDepth = Math.max(1.1, size.z + 0.9);
 
   const zone = new THREE.Mesh(
     new THREE.BoxGeometry(zoneWidth, zoneHeight, zoneDepth),
@@ -1408,9 +1470,23 @@ function createShelterZoneForObject(object) {
   );
   zone.position.set(center.x, zoneHeight / 2, center.z);
   zone.name = "shelterZone";
+  zone.userData.coverPoint = new THREE.Vector3(
+    center.x,
+    Math.max(0.85, Math.min(EYE_HEIGHT_CROUCH, box.min.y + 0.6)),
+    center.z
+  );
 
   room.add(zone);
   shelterZone = zone;
+}
+
+function registerNoCoverZone(object, padding, label) {
+  if (!object) return;
+  const box = new THREE.Box3().setFromObject(object);
+  const pad = new THREE.Vector3(padding.x, padding.y, padding.z);
+  box.min.sub(pad);
+  box.max.add(pad);
+  noCoverZones.push({ box, label });
 }
 
 // ==================== FALLBACK MODELLERI ====================
@@ -1629,6 +1705,8 @@ function createElectricalPanel() {
   const door = new THREE.Mesh(doorGeometry, doorMaterial);
   door.position.set(panelX - 0.06, panelY, panelZ);
   room.add(door);
+
+  return panel;
 }
 
 // ----------------- HANDS ------------------------
@@ -1975,6 +2053,14 @@ function updateInteraction() {
   if (!foundInteractable && shelterZone && isCameraInShelter()) {
     foundInteractable = shelterZone;
     hintText = coverActive ? "KORUNMA AKTIF" : "KORUNMA ALMAK ICIN [E]";
+  }
+
+  if (!foundInteractable) {
+    const noCoverReason = getNoCoverReason();
+    if (noCoverReason) {
+      foundInteractable = shelterZone;
+      hintText = `${noCoverReason} CEVRESINDE KORUNMA YOK`;
+    }
   }
 
   currentInteractable = foundInteractable;

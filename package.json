@@ -3,6 +3,14 @@
   "version": "1.0.0",
   "private": true,
   "description": "Web-based 3D earthquake emergency training simulator built with Three.js.",
+  "homepage": "https://furkankoykiran.github.io/EarthquakeSim/",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/furkankoykiran/EarthquakeSim.git"
+  },
+  "bugs": {
+    "url": "https://github.com/furkankoykiran/EarthquakeSim/issues"
+  },
   "keywords": [
     "earthquake",
     "simulation",

@@ -1,21 +1,19 @@
-FROM node:20-alpine
+FROM node:20-alpine AS builder
 
-# Çalışma dizini
 WORKDIR /app
 
-# Bağımlılık dosyalarını kopyala
 COPY package.json package-lock.json* ./
+RUN npm ci
 
-# Bağımlılıkları yükle
-RUN npm install
-
-# Uygulama kodunu kopyala
 COPY . .
+RUN npm run build
 
-# Vite varsayılan portu
-EXPOSE 5173
+FROM nginx:alpine
 
-# Vite geliştirme sunucusunu başlat
-CMD ["npx", "vite", "--host", "0.0.0.0", "--port", "5173"]
+COPY --from=builder /app/dist /usr/share/nginx/html
+
+EXPOSE 80
+
+CMD ["nginx", "-g", "daemon off;"]
 
 
