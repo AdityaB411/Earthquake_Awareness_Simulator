@@ -10,13 +10,13 @@ body {
   font-family: "Arial", sans-serif;
   background: #000;
   cursor: crosshair;
-  /* Nişangah imleci */
+  /* Crosshair cursor */
 }
 
 canvas {
   display: block;
   cursor: crosshair;
-  /* Nişangah imleci */
+  /* Crosshair cursor */
 }
 
 #ui-container {
@@ -168,13 +168,13 @@ canvas {
   z-index: 40;
 }
 
-/* GUI üzerinde göster */
+/* Display above the GUI */
 .lil-gui {
   pointer-events: auto !important;
   z-index: 1000 !important;
 }
 
-/* Scrollbar stilleri */
+/* Scrollbar styles */
 #instructions::-webkit-scrollbar,
 #decisionLog::-webkit-scrollbar,
 #resultScreen::-webkit-scrollbar {
