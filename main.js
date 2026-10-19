@@ -39,6 +39,7 @@ let handsGroup;
 let shelterZone;
 let coverTarget = null;
 let awaitingExit = false;
+let exitPromptedWithoutScan = false;
 const noCoverZones = [];
 const toppledBounds = new THREE.Box3();
 
@@ -741,8 +742,16 @@ function updateEarthquake(delta) {
     }
 
     if (getPlayerWorldPosition().z > 3.0) {
-      exitCompleted = true;
-      endScenario("success");
+      const scanComplete = decisionLog.some((entry) => entry.action === "hazard_scan_complete");
+      if (!scanComplete) {
+        if (!exitPromptedWithoutScan) {
+          exitPromptedWithoutScan = true;
+          showMessage("Complete the hazard scan before leaving the room.", 2500);
+        }
+      } else {
+        exitCompleted = true;
+        endScenario("success");
+      }
     }
   }
 }
@@ -1162,6 +1171,7 @@ function updateCoverState() {
 
 function isCameraInShelter() {
   if (!shelterZone) return false;
+  shelterZone.updateWorldMatrix(true, false);
   const box = new THREE.Box3().setFromObject(shelterZone);
   if (!box.containsPoint(getPlayerWorldPosition())) return false;
   const reason = getNoCoverReason();
@@ -2213,15 +2223,14 @@ async function createRoom() {
   }
 
   if (loadedModels.keyboard) {
+    // The bundled asset contains both the keyboard and mouse, so track it as one
+    // movable assembly rather than pretending the GLB exposes two separate props.
+    if (keyboard) room.remove(keyboard);
+    if (computerMouse) room.remove(computerMouse);
     keyboard = loadedModels.keyboard;
-    keyboard.name = "keyboard";
+    keyboard.name = "keyboardMouse";
+    computerMouse = null;
     room.add(keyboard);
-  }
-
-  if (loadedModels.mouse) {
-    computerMouse = loadedModels.mouse;
-    computerMouse.name = "mouse";
-    room.add(computerMouse);
   }
 
   registerPhysicsObject(monitor, {
@@ -2235,7 +2244,7 @@ async function createRoom() {
     mass: 1.8,
     stability: 0.4,
     allowTopple: true,
-    label: "Keyboard",
+    label: computerMouse ? "Keyboard" : "Keyboard and mouse",
     profile: "smallItem",
   });
   registerPhysicsObject(computerMouse, {
@@ -2906,6 +2915,9 @@ function startScenario() {
   scenarioStartTime = Date.now();
   startTime = scenarioStartTime;
   exitCompleted = false;
+  exitPromptedWithoutScan = false;
+  awaitingExit = false;
+  scenarioEnded = false;
   coverUsed = false;
   coverTimeTotal = 0;
   userScore = 0;
