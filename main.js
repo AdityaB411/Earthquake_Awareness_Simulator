@@ -2,6 +2,7 @@
 import * as THREE from "three";
 
 import { PointerLockControls } from "three/addons/controls/PointerLockControls.js";
+import { VRButton } from "three/addons/webxr/VRButton.js";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { RGBELoader } from "three/addons/loaders/RGBELoader.js";
 
@@ -1016,7 +1017,7 @@ initApp();
 async function initApp() {
   await init();
   createProceduralHands();
-  animate();
+  renderer.setAnimationLoop(animate);
 }
 
 async function init() {
@@ -1046,11 +1047,17 @@ async function init() {
   scene.fog = new THREE.Fog(0x87ceeb, 8, 20);
 
   renderer = new THREE.WebGLRenderer({ antialias: antialiasing });
+  renderer.xr.enabled = true;
+  renderer.xr.setReferenceSpaceType("local-floor");
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.toneMapping = toneMapping;
   renderer.toneMappingExposure = 1;
   container.appendChild(renderer.domElement);
+
+  const vrButton = VRButton.createButton(renderer);
+  vrButton.id = "webxr-vr-button";
+  document.body.appendChild(vrButton);
 
   controls = new PointerLockControls(camera, document.body);
 
@@ -1125,8 +1132,14 @@ function onWindowResize() {
 }
 
 function render() {
-  if (composer) composer.render();
-  else renderer.render(scene, camera);
+  // EffectComposer is not used while presenting immersive XR frames.
+  if (renderer && renderer.xr.isPresenting) {
+    renderer.render(scene, camera);
+  } else if (composer) {
+    composer.render();
+  } else {
+    renderer.render(scene, camera);
+  }
 }
 
 // ----------------- ROOM ------------------------
@@ -1783,8 +1796,6 @@ function updateHands() {
 // ----------------- ANIMATE ------------------------
 
 function animate() {
-  requestAnimationFrame(animate);
-
   deltaTime = clock.getDelta();
 
   if (controls && controls.update) controls.update();
