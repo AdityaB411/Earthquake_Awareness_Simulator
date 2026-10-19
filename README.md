@@ -9,7 +9,7 @@ A laptop-friendly, browser-based 3D earthquake-preparedness training prototype a
 - First-person desktop navigation with WASD and mouse pointer lock
 - 3D office environment with furniture and fallback models
 - Randomized main-shock and aftershock sequence
-- Visual camera/object shaking and heuristic object-toppling/damage cues
+- Visual camera/object shaking, stronger topple motion, ambient dust motes, short dust bursts when objects fall, flickering/dimming office lights, and layered procedural low-frequency rumble/impact sounds
 - Guided first-person practice and challenge modes
 - Practice, standard, and intense earthquake-sequence presets with a six-second preparation countdown
 - Live training objectives and a post-shaking hazard-scan checklist
