@@ -21,6 +21,8 @@ let gui, guiCam;
 let room;
 let playerRig;
 const xrControllers = [];
+let scenarioMode = "guided";
+let scenarioDifficulty = "standard";
 let isLocked = false;
 let currentInteractable = null;
 let interactionHintDiv;
@@ -66,6 +68,7 @@ function onKeyDown(event) {
       if (coverActive) {
         coverActive = false;
         coverTarget = null;
+        if (renderer && renderer.xr.isPresenting && playerRig) playerRig.position.y = 0;
         showMessage("You left the cover area.", 1000);
         return;
       }
@@ -392,8 +395,14 @@ function buildQuakeTimeline() {
   totalQuakeDuration = 0;
 
   const mainStart = 2.0;
-  const mainMagnitude = randomRange(5.9, 7.9);
-  const mainDuration = randomRange(12, 24);
+  const difficultySettings = {
+    practice: { magnitudeMin: 5.2, magnitudeMax: 6.2, durationMin: 8, durationMax: 12, aftershockMin: 1, aftershockMax: 2 },
+    standard: { magnitudeMin: 5.9, magnitudeMax: 7.2, durationMin: 12, durationMax: 18, aftershockMin: 2, aftershockMax: 3 },
+    intense: { magnitudeMin: 6.6, magnitudeMax: 7.9, durationMin: 16, durationMax: 22, aftershockMin: 3, aftershockMax: 4 },
+  };
+  const settings = difficultySettings[scenarioDifficulty] || difficultySettings.standard;
+  const mainMagnitude = randomRange(settings.magnitudeMin, settings.magnitudeMax);
+  const mainDuration = randomRange(settings.durationMin, settings.durationMax);
 
   quakeTimeline.push({
     start: mainStart,
@@ -404,7 +413,7 @@ function buildQuakeTimeline() {
 
   totalQuakeDuration += mainDuration;
 
-  const aftershockCount = Math.floor(randomRange(2, 4));
+  const aftershockCount = Math.floor(randomRange(settings.aftershockMin, settings.aftershockMax + 1));
   let nextStart = mainStart + mainDuration + randomRange(4, 8);
 
   for (let i = 0; i < aftershockCount; i += 1) {
@@ -1924,6 +1933,7 @@ function animate() {
   }
 
   updateHands();
+  updateObjectivePanel();
 
   updateStatus();
 
@@ -1939,7 +1949,24 @@ function animate() {
   renderer.toneMappingExposure = guiObject.value3;
 }
 
-// ----------------- ROOM TOUR ------------------------
+// ----------------- OBJECTIVES AND ROOM TOUR ------------------------
+function updateObjectivePanel() {
+  const panel = document.getElementById("objectivePanel");
+  if (!panel) return;
+  const objectives = [
+    { id: "objectiveCover", complete: coverUsed },
+    { id: "objectiveHold", complete: coverTimeTotal >= 3 },
+    { id: "objectiveExit", complete: scenarioEnded && awaitingExit === false && lastScenarioReport?.resultText?.includes("completed") },
+  ];
+  objectives.forEach((objective) => {
+    const item = document.getElementById(objective.id);
+    if (!item) return;
+    item.classList.toggle("is-complete", objective.complete);
+    const state = item.querySelector(".objective-state");
+    if (state) state.textContent = objective.complete ? "Complete" : "In progress";
+  });
+}
+
 let tourOverlay;
 
 function showTourMessage(text) {
@@ -2084,6 +2111,10 @@ function startScenario() {
 
   initRumbleAudio();
   buildQuakeTimeline();
+  const objectivePanel = document.getElementById("objectivePanel");
+  if (objectivePanel) objectivePanel.style.display = "block";
+  const objectiveMode = document.getElementById("objectiveMode");
+  if (objectiveMode) objectiveMode.textContent = (scenarioMode === "guided" ? "Guided practice" : "Challenge mode") + " · " + scenarioDifficulty;
 
   scenarioStartTime = Date.now();
   startTime = scenarioStartTime;
@@ -2115,6 +2146,8 @@ function validateAndStart() {
 
   const name = nameInput && nameInput.value.trim() ? nameInput.value.trim() : "Unknown";
   const surname = surnameInput && surnameInput.value.trim() ? surnameInput.value.trim() : "User";
+  scenarioMode = document.getElementById("scenarioMode")?.value || "guided";
+  scenarioDifficulty = document.getElementById("scenarioDifficulty")?.value || "standard";
 
   window.userData = {
     name,
@@ -2127,7 +2160,20 @@ function validateAndStart() {
     controlsIntro.style.display = "none";
   }
 
-  runRoomTour();
+  if (scenarioMode === "guided") {
+    runRoomTour();
+  } else {
+    if (camera) {
+      camera.position.set(0, EYE_HEIGHT, 2);
+      camera.rotation.set(0, 0, 0);
+    }
+    showTourMessage("Challenge mode selected. Explore the room and prepare to respond.");
+    setTimeout(() => {
+      hideTourMessage();
+      const startButton = document.getElementById("startScenarioBtn");
+      if (startButton) startButton.style.display = "block";
+    }, 1800);
+  }
 }
 
 window.earthquakeSimulation = {
