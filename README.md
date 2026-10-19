@@ -1,41 +1,41 @@
-# EarthquakeSim
+# Earthquake Awareness Simulator
 
-EarthquakeSim is a web-based 3D earthquake emergency training simulator for office environments. It focuses on take-cover behavior, aftershock awareness, and object stability under seismic motion.
+A laptop-friendly, browser-based 3D earthquake-preparedness training prototype adapted from [EarthquakeSim by Furkan Koykiran](https://github.com/furkankoykiran/EarthquakeSim). It uses Three.js and Vite to let a user explore an office, experience a simulated earthquake sequence, practise taking cover, and review a score and decision log.
 
-## Overview
+> **Current status:** this repository is a desktop 3D/WebGL prototype. WebXR/immersive VR support has not yet been implemented. The earthquake motion and object-toppling rules are illustrative game logic, not a scientific ground-motion or structural-engineering model. Use the app for education and demonstration, not as a substitute for official emergency guidance or certified training.
 
-This project is built with Three.js and Vite. It simulates shaking intensity, object topple risk, and a simple scoring/reporting flow to reinforce safe decisions during an earthquake.
+## Current features
 
-## Key Features
-
-- Camera shake with adjustable intensity and aftershocks
-- Object shake, topple, and damage cues
-- Take-cover interaction with scoring feedback
-- CSV training report export
-- FPS navigation with pointer lock controls
+- First-person desktop navigation with WASD and mouse pointer lock
+- 3D office environment with furniture and fallback models
+- Randomized main-shock and aftershock sequence
+- Visual camera/object shaking and heuristic object-toppling/damage cues
+- Take-cover interaction with response-time and cover-duration scoring
+- End-of-run summary, decision log, and CSV report download
+- Local browser-only operation; no server-side account or training-data storage is implemented
 
 ## Requirements
 
-- Node.js 18+ (recommended)
-- npm 9+
+- Node.js 18 or newer (recommended)
+- npm 9 or newer
 
-## Quick Start
+## Run locally
 
 ```bash
 npm install
-npm run dev -- --port 5175
+npm run dev
 ```
 
-Open: http://localhost:5175
+Open the local URL printed by Vite (normally http://localhost:5173).
 
-## Production Build
+## Build and preview
 
 ```bash
 npm run build
-npm run preview -- --host --port 5175
+npm run preview
 ```
 
-The build output is generated under `dist/`.
+The production build is generated in `dist/`.
 
 ## Docker
 
@@ -43,37 +43,34 @@ The build output is generated under `dist/`.
 docker compose up --build
 ```
 
-Open: http://localhost:8080
+The container serves the app on port 8080.
 
-## Configuration
+## Project structure
 
-- Port and host settings are defined in `vite.config.js`.
-- Earthquake intensity, cover logic, and object physics live in `main.js`.
-- UI copy and instruction content live in `index.html`.
+- `index.html`: interface, instructions, controls, and results screen
+- `main.js`: Three.js scene, movement, earthquake timeline, object effects, cover logic, scoring, and CSV export
+- `styles/style.css`: interface styling
+- `public/assets/3D/`: GLB models
+- `public/assets/hdri/`: environment maps
+- `vite.config.js`: development server and asset base settings
+- `.github/workflows/pages.yml`: GitHub Pages build/deployment workflow
 
-## Model Guide
+## Known limitations to address before course submission
 
-See `MODELS-GUIDE.md` for sourcing and integrating 3D models.
+1. **WebXR is not implemented yet.** The current application uses WebGL and desktop pointer-lock controls. If the assignment title requires WebXR, add WebXR support with a desktop fallback or describe the current version accurately as a browser-based 3D simulator.
+2. **Safety behaviour needs review.** The current cover zone is an invisible volume around the desk; the interaction mainly crouches the camera and locks movement rather than simulating a verified Drop, Cover, and Hold On action. The scenario should be checked against official safety guidance before being used as instructional material.
+3. **Physics are approximate.** Event magnitudes/durations and object topple/damage events are generated procedurally. They should not be presented as real earthquake predictions or scientifically accurate structural responses.
+4. **Scoring is heuristic.** The score represents actions inside this prototype, not a validated measure of real-world readiness. The score display reflects a maximum of 180 points under the current scoring rules.
+5. **Asset attribution should be verified.** The code is MIT-licensed, but confirm the licences/attributions for each bundled 3D model and environment asset before redistributing the project publicly.
 
-## Project Structure
+## Suggested course-project improvements
 
-- `index.html`: UI layout and scenario copy
-- `main.js`: core simulation logic
-- `styles/style.css`: UI styling
-- `public/assets/3D`: 3D models used by the scene
-- `public/assets/hdri`: environment lighting
+- Implement WebXR with an explicit desktop fallback
+- Teach and assess Drop, Cover, and Hold On with clear in-simulation explanations
+- Add a short pre-test and post-test so learning outcomes can be measured
+- Provide a transparent scoring rubric and scenario debrief
+- Test keyboard controls, model loading, report export, and keyboard accessibility on the target laptop/browser
 
-## Best Practices
+## Upstream project and license
 
-- Keep model files optimized and low-poly for stable FPS
-- Use consistent units (meters) for all object positioning
-- Test quake intensity changes with multiple runs to avoid extreme camera roll
-- Verify cover logic near the desk and exit flow after aftershocks
-
-## Safety Note
-
-This simulator is for training and awareness only. It is not a substitute for certified safety training or official emergency procedures.
-
-## License
-
-This project is licensed under the MIT License. See `LICENSE` for details.
+This fork is based on [EarthquakeSim](https://github.com/furkankoykiran/EarthquakeSim). The original repository's MIT license is retained in `LICENSE`; preserve its copyright and license notice when redistributing substantial portions of the code. Review the separate licences of bundled media assets as well.
