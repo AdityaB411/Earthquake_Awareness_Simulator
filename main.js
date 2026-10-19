@@ -40,6 +40,7 @@ let shelterZone;
 let coverTarget = null;
 let awaitingExit = false;
 const noCoverZones = [];
+const toppledBounds = new THREE.Box3();
 
 const clock = new THREE.Clock();
 let deltaTime;
@@ -756,6 +757,11 @@ function registerPhysicsObject(object, options = {}) {
     damaged: 0,
     broken: false,
     toppled: false,
+    grounded: false,
+    settled: false,
+    impactPlayed: false,
+    bounceCount: 0,
+    settleTimer: 0,
     seed: Math.random() * Math.PI * 2,
   };
 
@@ -813,8 +819,12 @@ function applyObjectShake(intensity, time, delta) {
         (Math.random() - 0.5) * (0.8 + intensity),
         (Math.random() - 0.5) * (0.8 + intensity)
       );
-      createDustBurst(object.position, intensity);
-      playImpactSound(intensity);
+      data.grounded = false;
+      data.settled = false;
+      data.impactPlayed = false;
+      data.bounceCount = 0;
+      data.settleTimer = 0;
+      createDustBurst(object.position, Math.min(0.45, intensity * 0.35));
       logDecision("object_toppled", `${data.label} toppled`);
     }
 
@@ -823,21 +833,82 @@ function applyObjectShake(intensity, time, delta) {
 }
 
 function updateToppledObject(object, data, delta) {
+  if (data.settled) return;
+
+  // Clamp frame time after tab stalls so a single long frame cannot launch objects
+  // through the floor. This is a lightweight game approximation, not rigid-body physics.
+  const dt = Math.min(Math.max(delta, 0), 0.05);
   const gravity = -9.0;
-  data.velocity.y += gravity * delta;
-  data.velocity.x *= 0.9;
-  data.velocity.z *= 0.9;
-  object.position.addScaledVector(data.velocity, delta);
+  data.toppleAge += dt;
+  data.velocity.y += gravity * dt;
+  data.velocity.x *= Math.exp(-0.18 * dt);
+  data.velocity.z *= Math.exp(-0.18 * dt);
+  object.position.addScaledVector(data.velocity, dt);
 
-  object.rotation.x += data.rotationVelocity.x * delta;
-  object.rotation.y += data.rotationVelocity.y * delta;
-  object.rotation.z += data.rotationVelocity.z * delta;
+  const airRotationDamping = Math.exp(-0.12 * dt);
+  object.rotation.x += data.rotationVelocity.x * dt;
+  object.rotation.y += data.rotationVelocity.y * dt;
+  object.rotation.z += data.rotationVelocity.z * dt;
+  data.rotationVelocity.multiplyScalar(airRotationDamping);
 
-  const targetY = groundPlaneY + data.baseMinOffset;
-  if (object.position.y <= targetY) {
-    object.position.y = targetY;
-    data.velocity.set(0, 0, 0);
-    data.rotationVelocity.multiplyScalar(0.2);
+  toppledBounds.setFromObject(object);
+  if (toppledBounds.min.y <= groundPlaneY) {
+    const impactSpeed = Math.max(0, -data.velocity.y);
+    object.position.y += groundPlaneY - toppledBounds.min.y;
+
+    if (!data.impactPlayed) {
+      data.impactPlayed = true;
+      const impactStrength = THREE.MathUtils.clamp(impactSpeed / 7.5, 0.2, 1.0);
+      const impactPosition = new THREE.Vector3(
+        object.position.x,
+        groundPlaneY + 0.02,
+        object.position.z
+      );
+      createDustBurst(impactPosition, impactStrength);
+      playImpactSound(impactStrength);
+      logDecision("object_impact", data.label + " hit the floor");
+    }
+
+    // A single small rebound makes impacts readable without allowing endless bouncing.
+    if (data.bounceCount === 0 && impactSpeed > 1.6) {
+      data.velocity.y = Math.min(0.55, impactSpeed * 0.06);
+      data.bounceCount += 1;
+      data.grounded = false;
+    } else {
+      data.velocity.y = 0;
+      data.grounded = true;
+    }
+  } else {
+    data.grounded = false;
+  }
+
+  if (data.grounded) {
+    const horizontalDamping = Math.exp(-4.2 * dt);
+    const rotationDamping = Math.exp(-5.0 * dt);
+    data.velocity.x *= horizontalDamping;
+    data.velocity.z *= horizontalDamping;
+    data.rotationVelocity.multiplyScalar(rotationDamping);
+
+    const horizontalSpeedSq =
+      data.velocity.x * data.velocity.x + data.velocity.z * data.velocity.z;
+    const angularSpeedSq =
+      data.rotationVelocity.x * data.rotationVelocity.x +
+      data.rotationVelocity.y * data.rotationVelocity.y +
+      data.rotationVelocity.z * data.rotationVelocity.z;
+
+    if (horizontalSpeedSq < 0.0025 && angularSpeedSq < 0.012) {
+      data.settleTimer += dt;
+      if (data.settleTimer >= 0.22) {
+        data.velocity.set(0, 0, 0);
+        data.rotationVelocity.set(0, 0, 0);
+        data.settled = true;
+        logDecision("object_settled", data.label + " came to rest");
+      }
+    } else {
+      data.settleTimer = 0;
+    }
+  } else {
+    data.settleTimer = 0;
   }
 }
 
