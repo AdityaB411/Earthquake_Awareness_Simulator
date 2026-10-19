@@ -45,7 +45,8 @@
         <p><strong>2.</strong> If a sturdy desk or table is nearby, get underneath it and press [E] to take cover in the simulation.</p>
         <p><strong>3.</strong> Hold on to your cover and stay protected while shaking continues.</p>
         <p><strong>4.</strong> Be prepared for possible aftershocks.</p>
-        <p><strong>5.</strong> When shaking stops, check for hazards and use the exit only when it is safe.</p>
+        <p><strong>5.</strong> When shaking stops, scan for hazards, then use the exit only when it is safe.</p>
+        <p><strong>Desktop:</strong> WASD to move, mouse to look, E to interact. <strong>VR:</strong> use thumbstick movement and controller trigger selection when supported.</p>
         <p><strong>WARNING:</strong> Do not use the heater or electrical-panel area as a cover location in this simulation.</p>
         <p><strong>WARNING:</strong> Lightweight or unstable objects may topple.</p>
       </div>
@@ -116,6 +117,20 @@
       <div
         style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px; margin-bottom: 30px; font-style: italic;">
         <p>Tip: Take cover under a sturdy desk or table and protect your head and neck.</p>
+      </div>
+
+      <div class="scenario-settings">
+        <label for="scenarioMode">Experience mode</label>
+        <select id="scenarioMode">
+          <option value="guided" selected>Guided first-person practice</option>
+          <option value="challenge">Challenge mode (minimal hints)</option>
+        </select>
+        <label for="scenarioDifficulty">Difficulty</label>
+        <select id="scenarioDifficulty">
+          <option value="practice">Practice</option>
+          <option value="standard" selected>Standard</option>
+          <option value="intense">Intense</option>
+        </select>
       </div>
 
       <div style="margin-bottom: 30px; display: flex; gap: 15px; justify-content: center;">
@@ -200,6 +215,16 @@
           pointer-events: none;
           box-shadow: 0 0 30px rgba(255, 170, 0, 0.8);
         "></div>
+
+    <div id="objectivePanel" class="objective-panel" style="display:none" aria-live="polite">
+      <div class="objective-heading">TRAINING OBJECTIVES <span id="objectiveMode">Guided practice · standard</span></div>
+      <div id="objectiveCover" class="objective-item"><span>Take cover under a sturdy desk</span><span class="objective-state">In progress</span></div>
+      <div id="objectiveHold" class="objective-item"><span>Stay protected during shaking</span><span class="objective-state">In progress</span></div>
+      <div id="objectiveScan" class="objective-item"><span>Check for hazards after shaking</span><span class="objective-state">In progress</span></div>
+      <div id="objectiveExit" class="objective-item"><span>Exit carefully when safe</span><span class="objective-state">In progress</span></div>
+      <button id="scanHazardsBtn" type="button">Scan for hazards</button>
+      <p id="hazardScanResult" aria-live="polite"></p>
+    </div>
 
     <div id="quakeStatus">Earthquake status: Waiting</div>
 
