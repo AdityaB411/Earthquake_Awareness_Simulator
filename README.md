@@ -11,11 +11,11 @@ A laptop-friendly, browser-based 3D earthquake-preparedness training prototype a
 - Randomized main-shock and aftershock sequence
 - Visual camera/object shaking and heuristic object-toppling/damage cues
 - Guided first-person practice and challenge modes
-- Practice, standard, and intense earthquake-sequence presets
+- Practice, standard, and intense earthquake-sequence presets with a six-second preparation countdown
 - Live training objectives and a post-shaking hazard-scan checklist
 - End-of-run score breakdown, decision log, and three-question safety knowledge check with explanations
 - User-triggered CSV report with escaped fields and the knowledge-check score
-- WebXR entry button, controller-trigger interactions, thumbstick movement, and an in-world start/settings panel when DOM overlays are unavailable
+- WebXR entry button, controller-trigger interactions, thumbstick movement, in-world status/objective HUD, and start/settings/results panels when DOM overlays are unavailable
 - Local browser-only operation; no server-side account or training-data storage is implemented
 
 ## Requirements
