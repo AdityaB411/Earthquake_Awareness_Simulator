@@ -23,6 +23,7 @@ let playerRig;
 const xrControllers = [];
 let scenarioMode = "guided";
 let scenarioDifficulty = "standard";
+let exitCompleted = false;
 let isLocked = false;
 let currentInteractable = null;
 let interactionHintDiv;
@@ -530,6 +531,7 @@ function updateEarthquake(delta) {
     }
 
     if (getPlayerWorldPosition().z > 3.0) {
+      exitCompleted = true;
       endScenario("success");
     }
   }
@@ -896,7 +898,7 @@ function endScenario(result) {
   const totalTime = ((Date.now() - startTime) / 1000).toFixed(1);
   const coverRatio = totalQuakeDuration > 0 ? coverTimeTotal / totalQuakeDuration : 0;
   const coverScore = Math.round(Math.min(1, coverRatio) * 60);
-  userScore += coverScore;
+  userScore = Math.min(180, userScore + coverScore);
 
   const toppledCount = physicsObjects.filter(
     (obj) => obj.userData.physics && obj.userData.physics.toppled
@@ -1091,7 +1093,10 @@ async function init() {
   renderer.toneMappingExposure = 1;
   container.appendChild(renderer.domElement);
 
-  const vrButton = VRButton.createButton(renderer);
+  const vrButton = VRButton.createButton(renderer, {
+    domOverlay: { root: document.body },
+    optionalFeatures: ["dom-overlay"],
+  });
   vrButton.id = "webxr-vr-button";
   document.body.appendChild(vrButton);
 
@@ -1177,6 +1182,7 @@ async function init() {
 }
 
 function onXRSessionStart() {
+  resetCameraShake();
   if (controls && controls.isLocked) controls.unlock();
   playerRig.position.set(0, 0, 2);
   playerRig.rotation.set(0, 0, 0);
@@ -1244,7 +1250,15 @@ function handleXRSelect(controller) {
   const raycaster = new THREE.Raycaster();
   raycaster.setFromXRController(controller);
   const intersections = raycaster.intersectObjects(room.children, true);
-  const hit = intersections.find((intersection) => intersection.distance < 3.0);
+  const hit = intersections.find((intersection) => {
+    if (intersection.distance >= 3.0) return false;
+    let candidate = intersection.object;
+    while (candidate && candidate !== room) {
+      if (["Door", "shelterZone", "desk"].includes(candidate.name) || candidate.userData?.physics) return true;
+      candidate = candidate.parent;
+    }
+    return false;
+  });
   if (!hit) {
     showMessage("Point at the desk to take cover, or at the door to open it.", 1800);
     return;
@@ -1261,7 +1275,11 @@ function handleXRSelect(controller) {
     return;
   }
 
-  const physics = hit.object.userData.physics;
+  let physicsObject = hit.object;
+  while (physicsObject && physicsObject !== room && !physicsObject.userData?.physics) {
+    physicsObject = physicsObject.parent;
+  }
+  const physics = physicsObject?.userData?.physics;
   if (awaitingExit && physics && (physics.toppled || physics.broken)) {
     const label = physics.label || "Object";
     const action = "hazard_observed";
@@ -2008,7 +2026,7 @@ function updateObjectivePanel() {
     { id: "objectiveCover", complete: coverUsed },
     { id: "objectiveHold", complete: coverTimeTotal >= 3 },
     { id: "objectiveScan", complete: decisionLog.some((entry) => entry.action === "hazard_scan_complete") },
-    { id: "objectiveExit", complete: scenarioEnded && lastScenarioReport?.resultText?.includes("completed") },
+    { id: "objectiveExit", complete: exitCompleted },
   ];
   objectives.forEach((objective) => {
     const item = document.getElementById(objective.id);
@@ -2170,6 +2188,11 @@ function startScenario() {
 
   scenarioStartTime = Date.now();
   startTime = scenarioStartTime;
+  exitCompleted = false;
+  coverUsed = false;
+  coverTimeTotal = 0;
+  userScore = 0;
+  decisionLog = [];
   timerStarted = true;
 
   setTimeout(() => {
