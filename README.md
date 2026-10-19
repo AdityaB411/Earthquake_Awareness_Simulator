@@ -15,7 +15,7 @@ A laptop-friendly, browser-based 3D earthquake-preparedness training prototype a
 - Live training objectives and a post-shaking hazard-scan checklist
 - End-of-run score breakdown, decision log, and three-question safety knowledge check with explanations
 - User-triggered CSV report with escaped fields and the knowledge-check score
-- WebXR entry button, controller-trigger interactions, thumbstick movement, in-world status/objective HUD, and start/settings/results panels when DOM overlays are unavailable
+- WebXR entry button, controller-trigger interactions, thumbstick movement, and in-world status/objective/start/settings/results panels for immersive mode
 - Local browser-only operation; no server-side account or training-data storage is implemented
 
 ## Requirements
@@ -40,7 +40,7 @@ Open the local URL printed by Vite (normally http://localhost:5173). Use localho
 4. Open the emulator developer interface, select a supported headset/controller profile, and enter immersive VR using the app's WebXR button.
 5. Use the emulated controller to point at the in-world mode/difficulty controls and START SCENARIO; test thumbstick locomotion, desk interaction, hazard inspection, and exit behavior.
 
-The emulator is useful for checking WebXR API wiring and input logic, but it is not a substitute for testing comfort, frame rate, tracking, and interaction on a real headset. The project includes an in-world interface fallback because the emulator currently lists DOM overlays as unsupported.
+The emulator is useful for checking WebXR API wiring and input logic, but it is not a substitute for testing comfort, frame rate, tracking, and interaction on a real headset. Core VR controls use in-world panels, so the emulator does not need DOM-overlay support.
 
 ## Build and preview
 
@@ -67,7 +67,7 @@ The container serves the app on port 8080.
 - `public/assets/3D/`: GLB models
 - `public/assets/hdri/`: environment maps
 - `vite.config.js`: development server and asset base settings
-- `scripts/validate-project.mjs`: checks static UI references and bundled model assets
+- `scripts/validate-project.mjs`: checks static UI references, bundled model assets, and local-only Vite commands
 - `.github/workflows/build.yml`: CI source validation and production-build check
 - `.github/workflows/pages.yml`: GitHub Pages build/deployment workflow
 
