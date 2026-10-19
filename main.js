@@ -529,7 +529,8 @@ function loadModel(modelKey) {
         resolve(model);
       },
       () => {},
-      () => {
+      (error) => {
+        console.warn(`Could not load 3D model "${config.file}". Using a fallback where available.`, error);
         resolve(null);
       }
     );
@@ -563,7 +564,7 @@ const cameraShake = {
 };
 
 const physicsObjects = [];
-const groundPlaneY = -0.05;
+const groundPlaneY = 0;
 
 function randomRange(min, max) {
   return min + Math.random() * (max - min);
@@ -1088,21 +1089,23 @@ function relaxObjects(delta) {
       return;
     }
 
-    object.position.lerp(data.basePosition, delta * 2.5);
+    const dt = Math.min(Math.max(delta, 0), 0.1);
+    const recoveryAlpha = 1 - Math.exp(-2.5 * dt);
+    object.position.lerp(data.basePosition, recoveryAlpha);
     object.rotation.x = THREE.MathUtils.lerp(
       object.rotation.x,
       data.baseRotation.x,
-      delta * 2.5
+      recoveryAlpha
     );
     object.rotation.y = THREE.MathUtils.lerp(
       object.rotation.y,
       data.baseRotation.y,
-      delta * 2.5
+      recoveryAlpha
     );
     object.rotation.z = THREE.MathUtils.lerp(
       object.rotation.z,
       data.baseRotation.z,
-      delta * 2.5
+      recoveryAlpha
     );
   });
 }
@@ -1483,9 +1486,25 @@ addGUI();
 initApp();
 
 async function initApp() {
-  await init();
-  createProceduralHands();
-  renderer.setAnimationLoop(animate);
+  try {
+    await init();
+    createProceduralHands();
+    renderer.setAnimationLoop(animate);
+  } catch (error) {
+    console.error("Earthquake Awareness Simulator failed to initialize.", error);
+    const panel = document.createElement("section");
+    panel.setAttribute("role", "alert");
+    panel.style.cssText = "position:fixed;inset:1rem;z-index:10000;max-width:42rem;margin:auto;padding:1.5rem;background:#1a1a2e;color:#fff;border:2px solid #ff8a65;border-radius:12px;font:16px/1.5 Arial,sans-serif;overflow:auto;";
+    const heading = document.createElement("h2");
+    heading.textContent = "The simulation could not start";
+    const message = document.createElement("p");
+    message.textContent = "The 3D scene failed to initialize. Refresh the page and check the browser console if the problem continues.";
+    const detail = document.createElement("pre");
+    detail.style.cssText = "white-space:pre-wrap;overflow-wrap:anywhere;color:#ffccbc;";
+    detail.textContent = error instanceof Error ? error.message : String(error);
+    panel.append(heading, message, detail);
+    document.body.appendChild(panel);
+  }
 }
 
 async function init() {
@@ -1507,12 +1526,19 @@ async function init() {
 
   await createRoom();
 
-  hdriLoader.load("Env.hdr", function (texture) {
-    if (!ENV_REFLECTION_ENABLED) return;
-    texture.mapping = THREE.EquirectangularReflectionMapping;
-    scene.environment = texture;
-  });
-  if (!ENV_REFLECTION_ENABLED) scene.environment = null;
+  if (ENV_REFLECTION_ENABLED) {
+    hdriLoader.load(
+      "Env.hdr",
+      (texture) => {
+        texture.mapping = THREE.EquirectangularReflectionMapping;
+        scene.environment = texture;
+      },
+      undefined,
+      (error) => console.warn("Could not load the environment HDR image.", error)
+    );
+  } else {
+    scene.environment = null;
+  }
 
   scene.background = new THREE.Color(0x87ceeb);
   scene.fog = new THREE.Fog(0x87ceeb, 8, 20);
@@ -1526,10 +1552,9 @@ async function init() {
   renderer.toneMappingExposure = 1;
   container.appendChild(renderer.domElement);
 
-  const vrButton = VRButton.createButton(renderer, {
-    domOverlay: { root: document.body },
-    optionalFeatures: ["dom-overlay"],
-  });
+  // Keep controller interactions in the in-world panels and preserve VRButton's
+  // default optional local-floor and bounded-floor features.
+  const vrButton = VRButton.createButton(renderer);
   vrButton.id = "webxr-vr-button";
   vrButton.style.left = "auto";
   document.body.appendChild(vrButton);
@@ -1566,6 +1591,12 @@ async function init() {
 
   window.addEventListener("keydown", onKeyDown);
   window.addEventListener("keyup", onKeyUp);
+  window.addEventListener("blur", () => {
+    moveState.forward = false;
+    moveState.backward = false;
+    moveState.left = false;
+    moveState.right = false;
+  });
 
   window.addEventListener("resize", onWindowResize);
 
@@ -2172,7 +2203,7 @@ async function createRoom() {
   if (loadedModels.monitor) {
     monitor = loadedModels.monitor;
     monitor.name = "monitor";
-    monitorAssembly.add(monitor);
+    room.add(monitor);
   } else {
     const monitorData = createFallbackMonitor();
     monitor = monitorData.monitor;
@@ -2347,17 +2378,21 @@ function registerNoCoverZone(object, padding, label) {
 // ==================== FALLBACK MODELS ====================
 
 function createFallbackDesk() {
+  const desk = new THREE.Group();
+  desk.name = "desk";
+
   const deskGeometry = new THREE.BoxGeometry(1.5, 0.05, 0.8);
   const deskMaterial = new THREE.MeshStandardMaterial({
     color: 0x5c4033,
     roughness: 0.7,
     metalness: 0.1,
   });
-  const desk = new THREE.Mesh(deskGeometry, deskMaterial);
-  desk.position.set(0, 0.75, 0);
-  desk.castShadow = true;
-  desk.receiveShadow = true;
-  room.add(desk);
+  const tabletop = new THREE.Mesh(deskGeometry, deskMaterial);
+  tabletop.position.set(0, 0.75, 0);
+  tabletop.castShadow = true;
+  tabletop.receiveShadow = true;
+  tabletop.name = "desk";
+  desk.add(tabletop);
 
   const legGeometry = new THREE.CylinderGeometry(0.04, 0.04, 0.72, 12);
   const legMaterial = new THREE.MeshStandardMaterial({
@@ -2377,9 +2412,11 @@ function createFallbackDesk() {
     const leg = new THREE.Mesh(legGeometry, legMaterial);
     leg.position.set(pos[0], pos[1], pos[2]);
     leg.castShadow = true;
-    room.add(leg);
+    leg.name = "desk";
+    desk.add(leg);
   });
 
+  room.add(desk);
   return desk;
 }
 
@@ -2512,18 +2549,21 @@ function createFallbackChair() {
 }
 
 function createFallbackHeater() {
+  const heater = new THREE.Group();
+  heater.name = "heater";
+  heater.position.set(0.35, 0.19, 0.15);
+
   const heaterGeometry = new THREE.CylinderGeometry(0.16, 0.19, 0.38, 20);
   const heaterMaterial = new THREE.MeshStandardMaterial({
     color: 0x6e6e6e,
     roughness: 0.55,
     metalness: 0.35,
   });
-  const heater = new THREE.Mesh(heaterGeometry, heaterMaterial);
-  heater.position.set(0.35, 0.19, 0.15);
-  heater.castShadow = true;
-  heater.receiveShadow = true;
-  heater.name = "heater";
-  room.add(heater);
+  const heaterBody = new THREE.Mesh(heaterGeometry, heaterMaterial);
+  heaterBody.castShadow = true;
+  heaterBody.receiveShadow = true;
+  heaterBody.name = "heater";
+  heater.add(heaterBody);
 
   const rimGeometry = new THREE.TorusGeometry(0.17, 0.015, 8, 24);
   const rimMaterial = new THREE.MeshStandardMaterial({
@@ -2532,10 +2572,12 @@ function createFallbackHeater() {
     metalness: 0.6,
   });
   const rim = new THREE.Mesh(rimGeometry, rimMaterial);
-  rim.position.set(0.35, 0.38, 0.15);
+  rim.position.set(0, 0.19, 0);
   rim.rotation.x = Math.PI / 2;
-  room.add(rim);
+  rim.name = "heater";
+  heater.add(rim);
 
+  room.add(heater);
   return heater;
 }
 
@@ -2641,7 +2683,6 @@ function animate() {
   deltaTime = clock.getDelta();
 
   if (controls && controls.update) controls.update();
-  controls.dampingFactor = guiObject.value4;
 
   updateFirstPersonMovement(deltaTime);
   updateInteraction();
@@ -2851,6 +2892,10 @@ function startScenario() {
     statusDiv.style.borderColor = "#ffffff";
   }
 
+  if (!(renderer && renderer.xr.isPresenting) && controls && !controls.isLocked) {
+    controls.lock();
+  }
+
   initRumbleAudio();
   buildQuakeTimeline();
   const objectivePanel = document.getElementById("objectivePanel");
@@ -2880,10 +2925,6 @@ function startScenario() {
 
     const timerDiv = document.getElementById("timer");
     if (timerDiv) timerDiv.style.display = "block";
-
-    if (!(renderer && renderer.xr.isPresenting) && controls && !controls.isLocked) {
-      controls.lock();
-    }
 
     const crosshair = document.getElementById("crosshair");
     if (crosshair) crosshair.style.display = "block";
