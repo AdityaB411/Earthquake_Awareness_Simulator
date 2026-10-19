@@ -24,6 +24,7 @@ const xrControllers = [];
 let xrWelcomePanel = null;
 let xrHudPanel = null;
 let xrWelcomeCanvas = null;
+let xrWelcomeTexture = null;
 let xrHudCanvas = null;
 let xrHudTexture = null;
 let lastXRHudText = "";
@@ -988,6 +989,7 @@ function endScenario(result) {
 
   const reportButton = document.getElementById("downloadReportBtn");
   if (reportButton) reportButton.disabled = false;
+  if (renderer && renderer.xr.isPresenting) updateXRWelcomePanel();
 }
 
 function exportToCSV(totalTime, score, resultText, toppledCount, damagedCount) {
@@ -1242,6 +1244,35 @@ function updateXRWelcomePanel() {
   if (!xrWelcomePanel) return;
   const modeButton = xrWelcomePanel.getObjectByName("xrModeButton");
   const difficultyButton = xrWelcomePanel.getObjectByName("xrDifficultyButton");
+  const startButton = xrWelcomePanel.getObjectByName("xrStartButton");
+  const exitButton = xrWelcomePanel.getObjectByName("xrExitButton");
+  if (scenarioEnded) {
+    const context = xrWelcomeCanvas.getContext("2d");
+    context.clearRect(0, 0, xrWelcomeCanvas.width, xrWelcomeCanvas.height);
+    context.fillStyle = "rgba(5, 12, 26, 0.96)";
+    context.fillRect(0, 0, xrWelcomeCanvas.width, xrWelcomeCanvas.height);
+    context.strokeStyle = "#00d4ff";
+    context.lineWidth = 12;
+    context.strokeRect(8, 8, xrWelcomeCanvas.width - 16, xrWelcomeCanvas.height - 16);
+    context.textAlign = "center";
+    context.fillStyle = "#8de0ff";
+    context.font = "bold 60px Arial";
+    context.fillText("SCENARIO COMPLETE", 512, 145);
+    context.fillStyle = "#ffffff";
+    context.font = "32px Arial";
+    context.fillText("Exit immersive mode to review your score", 512, 235);
+    context.fillText("and open the safety knowledge check.", 512, 285);
+    if (xrWelcomeTexture) xrWelcomeTexture.needsUpdate = true;
+    if (modeButton) modeButton.visible = false;
+    if (difficultyButton) difficultyButton.visible = false;
+    if (startButton) startButton.visible = false;
+    if (exitButton) exitButton.visible = true;
+    return;
+  }
+  if (modeButton) modeButton.visible = true;
+  if (difficultyButton) difficultyButton.visible = true;
+  if (startButton) startButton.visible = true;
+  if (exitButton) exitButton.visible = false;
   if (modeButton) {
     modeButton.material.map.dispose();
     modeButton.material.map = createXRLabelTexture("Mode: " + (scenarioMode === "guided" ? "Guided" : "Challenge") + " (tap to change)", "#244f7a");
@@ -1279,8 +1310,10 @@ function createXRInterface() {
   context.font = "28px Arial";
   context.fillText("Point a controller and press its trigger to select.", 512, 230);
   context.fillText("Use the thumbstick to move; take cover under a sturdy desk.", 512, 275);
+  xrWelcomeCanvas = panelCanvas;
   const panelTexture = new THREE.CanvasTexture(panelCanvas);
   panelTexture.colorSpace = THREE.SRGBColorSpace;
+  xrWelcomeTexture = panelTexture;
   const panelMesh = new THREE.Mesh(
     new THREE.PlaneGeometry(1.35, 1.0),
     new THREE.MeshBasicMaterial({ map: panelTexture, transparent: false, depthTest: false })
@@ -1290,6 +1323,9 @@ function createXRInterface() {
   xrWelcomePanel.add(createXRPanelButton("xrModeButton", "Mode: Guided (tap to change)", -0.16, "#244f7a"));
   xrWelcomePanel.add(createXRPanelButton("xrDifficultyButton", "Difficulty: standard (tap to cycle)", -0.32, "#244f7a"));
   xrWelcomePanel.add(createXRPanelButton("xrStartButton", "START SCENARIO", -0.47, "#087f55"));
+  const xrExitButton = createXRPanelButton("xrExitButton", "EXIT VR / REVIEW RESULTS", -0.36, "#087f55");
+  xrExitButton.visible = false;
+  xrWelcomePanel.add(xrExitButton);
   camera.add(xrWelcomePanel);
 
   xrHudPanel = new THREE.Group();
@@ -1318,7 +1354,7 @@ function updateXRInterface() {
   }
   const session = renderer.xr.getSession();
   const hasDomOverlay = Boolean(session && session.domOverlayState);
-  if (xrWelcomePanel) xrWelcomePanel.visible = !hasDomOverlay && !timerStarted && !scenarioEnded;
+  if (xrWelcomePanel) xrWelcomePanel.visible = !hasDomOverlay && ((!timerStarted && !scenarioEnded) || scenarioEnded);
   if (!xrHudPanel) return;
   xrHudPanel.visible = !hasDomOverlay && timerStarted && !scenarioEnded;
   if (!xrHudPanel.visible) return;
@@ -1327,8 +1363,10 @@ function updateXRInterface() {
   const status = statusDiv ? statusDiv.textContent : "Scenario in progress";
   const objectiveText = "Cover: " + (coverUsed ? "taken" : "not yet") +
     " | Hold: " + (coverTimeTotal >= 3 ? "complete" : "in progress");
-  const scanText = "Hazard scan: " + (decisionLog.some((entry) => entry.action === "hazard_scan_complete") ? "complete" : "pending") +
-    " | Exit: " + (exitCompleted ? "complete" : "pending");
+  const scanComplete = decisionLog.some((entry) => entry.action === "hazard_scan_complete");
+  const scanText = awaitingExit && !scanComplete
+    ? "Point into open space and press trigger to scan hazards."
+    : "Hazard scan: " + (scanComplete ? "complete" : "pending") + " | Exit: " + (exitCompleted ? "complete" : "pending");
   const textValue = [status, scenarioMode + " mode · " + scenarioDifficulty, objectiveText, scanText].join("\n");
   if (textValue === lastXRHudText) return;
   lastXRHudText = textValue;
@@ -1431,16 +1469,25 @@ function handleXRSelect(controller) {
     if (intersection.distance >= 3.0) return false;
     let candidate = intersection.object;
     while (candidate && candidate !== room) {
-      if (["Door", "shelterZone", "desk", "xrModeButton", "xrDifficultyButton", "xrStartButton"].includes(candidate.name) || candidate.userData?.physics) return true;
+      if (["Door", "shelterZone", "desk", "xrModeButton", "xrDifficultyButton", "xrStartButton", "xrExitButton"].includes(candidate.name) || candidate.userData?.physics) return true;
       candidate = candidate.parent;
     }
     return false;
   });
   if (!hit) {
-    showMessage("Point at the desk to take cover, or at the door to open it.", 1800);
+    if (awaitingExit) {
+      scanVisibleHazards();
+    } else {
+      showMessage("Point at the desk to take cover, or at the door to open it.", 1800);
+    }
     return;
   }
 
+  if (hit.object.name === "xrExitButton") {
+    const session = renderer.xr.getSession();
+    if (session) session.end();
+    return;
+  }
   if (hit.object.name === "xrModeButton") {
     scenarioMode = scenarioMode === "guided" ? "challenge" : "guided";
     updateXRWelcomePanel();
