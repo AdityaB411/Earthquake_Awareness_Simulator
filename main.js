@@ -2206,7 +2206,6 @@ async function createRoom() {
   createShelterZoneForObject(desk);
 
   let monitor = null;
-  let screen = null;
   let keyboard = null;
   let computerMouse = null;
 
@@ -2215,22 +2214,19 @@ async function createRoom() {
     monitor.name = "monitor";
     room.add(monitor);
   } else {
-    const monitorData = createFallbackMonitor();
-    monitor = monitorData.monitor;
-    screen = monitorData.screen;
-    keyboard = monitorData.keyboard;
-    computerMouse = monitorData.mouse;
+    monitor = createFallbackMonitor(Boolean(loadedModels.desk));
   }
 
   if (loadedModels.keyboard) {
     // The bundled asset contains both the keyboard and mouse, so track it as one
     // movable assembly rather than pretending the GLB exposes two separate props.
-    if (keyboard) room.remove(keyboard);
-    if (computerMouse) room.remove(computerMouse);
     keyboard = loadedModels.keyboard;
     keyboard.name = "keyboardMouse";
-    computerMouse = null;
     room.add(keyboard);
+  } else {
+    const inputProps = createFallbackKeyboardAndMouse(Boolean(loadedModels.desk));
+    keyboard = inputProps.keyboard;
+    computerMouse = inputProps.mouse;
   }
 
   registerPhysicsObject(monitor, {
@@ -2429,7 +2425,7 @@ function createFallbackDesk() {
   return desk;
 }
 
-function createFallbackMonitor() {
+function createFallbackMonitor(hasLoadedDesk = false) {
   const monitorAssembly = new THREE.Group();
   monitorAssembly.name = "monitor";
   const monitorGeometry = new THREE.BoxGeometry(0.55, 0.38, 0.04);
@@ -2457,6 +2453,7 @@ function createFallbackMonitor() {
   const screen = new THREE.Mesh(screenGeometry, screenMaterial);
   screen.position.set(0, 0.11, 0.025);
   screen.rotation.x = -0.08;
+  screen.name = "monitor";
   monitorAssembly.add(screen);
 
   const neckGeometry = new THREE.BoxGeometry(0.06, 0.15, 0.06);
@@ -2467,15 +2464,20 @@ function createFallbackMonitor() {
   });
   const neck = new THREE.Mesh(neckGeometry, standMaterial);
   neck.position.set(0, -0.015, 0);
+  neck.name = "monitor";
   monitorAssembly.add(neck);
 
   const baseGeometry = new THREE.CylinderGeometry(0.12, 0.14, 0.02, 24);
   const base = new THREE.Mesh(baseGeometry, standMaterial);
   base.position.set(0, -0.085, 0);
+  base.name = "monitor";
   monitorAssembly.add(base);
-  monitorAssembly.position.set(0, 0.87, -0.18);
+  monitorAssembly.position.set(0, 0.87, hasLoadedDesk ? -2.0 : -0.18);
   room.add(monitorAssembly);
+  return monitorAssembly;
+}
 
+function createFallbackKeyboardAndMouse(hasLoadedDesk = false) {
   const keyboardGeometry = new THREE.BoxGeometry(0.42, 0.015, 0.14);
   const keyboardMaterial = new THREE.MeshStandardMaterial({
     color: 0x2a2a2a,
@@ -2483,7 +2485,7 @@ function createFallbackMonitor() {
     metalness: 0.3,
   });
   const keyboard = new THREE.Mesh(keyboardGeometry, keyboardMaterial);
-  keyboard.position.set(0, 0.785, 0.12);
+  keyboard.position.set(hasLoadedDesk ? -0.2 : 0, 0.785, hasLoadedDesk ? -1.45 : 0.12);
   keyboard.castShadow = true;
   keyboard.name = "keyboard";
   room.add(keyboard);
@@ -2495,13 +2497,13 @@ function createFallbackMonitor() {
     metalness: 0.4,
   });
   const computerMouse = new THREE.Mesh(mouseGeometry, mouseMaterial);
-  computerMouse.position.set(0.28, 0.79, 0.15);
+  computerMouse.position.set(hasLoadedDesk ? 0.28 : 0.28, 0.79, hasLoadedDesk ? -1.35 : 0.15);
   computerMouse.castShadow = true;
+  computerMouse.name = "mouse";
   room.add(computerMouse);
 
-  return { monitor: monitorAssembly, screen, keyboard, mouse: computerMouse };
+  return { keyboard, mouse: computerMouse };
 }
-
 function createFallbackChair() {
   const chairGroup = new THREE.Group();
 
