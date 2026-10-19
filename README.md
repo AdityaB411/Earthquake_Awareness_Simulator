@@ -13,7 +13,7 @@ A laptop-friendly, browser-based 3D earthquake-preparedness training prototype a
 - Guided first-person practice and challenge modes
 - Practice, standard, and intense earthquake-sequence presets
 - Live training objectives and a post-shaking hazard-scan checklist
-- End-of-run score, decision log, and three-question safety knowledge check with explanations
+- End-of-run score breakdown, decision log, and three-question safety knowledge check with explanations
 - User-triggered CSV report with escaped fields and the knowledge-check score
 - WebXR entry button, controller-trigger interactions, thumbstick movement, and an in-world start/settings panel when DOM overlays are unavailable
 - Local browser-only operation; no server-side account or training-data storage is implemented
@@ -76,7 +76,7 @@ The container serves the app on port 8080.
 2. **Safety behaviour needs review.** The current cover zone is an invisible volume around the desk; the interaction mainly crouches the viewpoint and restricts movement rather than modelling hand placement or physically verified Drop, Cover, and Hold On behavior. The hazard scan reports only toppled/damaged objects created by this simulation. The scenario should be checked against official safety guidance before being used as instructional material.
 3. **Physics are approximate.** Event magnitudes/durations and object topple/damage events are generated procedurally. They should not be presented as real earthquake predictions or scientifically accurate structural responses.
 4. **Assessment is educational.** The short knowledge check reinforces safety guidance but is not a validated readiness test or certification.
-5. **Scoring is heuristic.** The score represents actions inside this prototype, not a validated measure of real-world readiness. The score display reflects a maximum of 180 points under the current scoring rules.
+5. **Scoring is heuristic.** The score separates response-time points (up to 120) from time-protected points (up to 60), for a maximum of 180. It represents actions inside this prototype, not a validated measure of real-world readiness.
 6. **Asset attribution should be verified.** The code is MIT-licensed, but confirm the licences/attributions for each bundled 3D model and environment asset before redistributing the project publicly.
 
 ## Suggested course-project improvements
