@@ -71,6 +71,7 @@ function onKeyDown(event) {
         coverActive = false;
         coverTarget = null;
         if (renderer && renderer.xr.isPresenting && playerRig) playerRig.position.y = 0;
+        else if (camera) camera.position.y = EYE_HEIGHT;
         showMessage("You left the cover area.", 1000);
         return;
       }
@@ -528,6 +529,7 @@ function updateEarthquake(delta) {
       coverActive = false;
       coverTarget = null;
       if (renderer && renderer.xr.isPresenting && playerRig) playerRig.position.y = 0;
+      else if (camera) camera.position.y = EYE_HEIGHT;
       showMessage("Shaking has stopped. Check for hazards, then use the exit when safe.", 5000);
       logDecision("exit_instruction", "Exit guidance shown after shaking stopped");
     }
@@ -745,6 +747,7 @@ function updateCoverState() {
     coverActive = false;
     coverTarget = null;
     if (renderer && renderer.xr.isPresenting && playerRig) playerRig.position.y = 0;
+    else if (camera) camera.position.y = EYE_HEIGHT;
     showMessage("You left the cover area.", 1000);
   }
 }
@@ -1040,7 +1043,7 @@ function exportToCSV(totalTime, score, resultText, toppledCount, damagedCount) {
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 // ----------------- GUI ------------------------
