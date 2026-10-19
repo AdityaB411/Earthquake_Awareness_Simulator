@@ -734,6 +734,87 @@ function applyCameraShake(intensity, time) {
   camera.rotation.z += cameraShake.rot.z;
 }
 
+const PHYSICS_PROFILES = {
+  generic: {
+    shakePositionScale: 1,
+    shakeRotationScale: 1,
+    verticalShakeScale: 1,
+    toppleThreshold: 0.48,
+    toppleRateBase: 0.04,
+    toppleRateScale: 0.55,
+    lateralImpulse: 0.8,
+    spinImpulse: 1.4,
+    gravity: 9.0,
+    airDrag: 0.18,
+    airRotationDrag: 0.12,
+    rebound: 0.06,
+    maxRebound: 0.45,
+    groundFriction: 4.2,
+    groundRotationFriction: 5.0,
+    linearSettleSq: 0.0025,
+    angularSettleSq: 0.012,
+    settleDuration: 0.22,
+    dustScale: 1,
+    impactSoundScale: 1,
+  },
+  desk: {
+    shakePositionScale: 0.42, shakeRotationScale: 0.35, verticalShakeScale: 0.3,
+    toppleThreshold: 2, toppleRateBase: 0, toppleRateScale: 0,
+    lateralImpulse: 0.2, spinImpulse: 0.2, gravity: 9, airDrag: 0.25, airRotationDrag: 0.2,
+    rebound: 0, maxRebound: 0, groundFriction: 7, groundRotationFriction: 7,
+    linearSettleSq: 0.0025, angularSettleSq: 0.012, settleDuration: 0.22,
+    dustScale: 0.3, impactSoundScale: 0.35,
+  },
+  monitor: {
+    shakePositionScale: 0.72, shakeRotationScale: 1.25, verticalShakeScale: 0.55,
+    toppleThreshold: 0.42, toppleRateBase: 0.035, toppleRateScale: 0.52,
+    lateralImpulse: 0.55, spinImpulse: 1.35, gravity: 9.4, airDrag: 0.22, airRotationDrag: 0.1,
+    rebound: 0.045, maxRebound: 0.38, groundFriction: 4.6, groundRotationFriction: 5.8,
+    linearSettleSq: 0.0025, angularSettleSq: 0.011, settleDuration: 0.22,
+    dustScale: 0.8, impactSoundScale: 0.95,
+  },
+  smallItem: {
+    shakePositionScale: 1.85, shakeRotationScale: 1.3, verticalShakeScale: 0.8,
+    toppleThreshold: 0.2, toppleRateBase: 0.13, toppleRateScale: 0.78,
+    lateralImpulse: 1.45, spinImpulse: 2.1, gravity: 10.5, airDrag: 0.12, airRotationDrag: 0.08,
+    rebound: 0.11, maxRebound: 0.34, groundFriction: 2.8, groundRotationFriction: 3.8,
+    linearSettleSq: 0.004, angularSettleSq: 0.018, settleDuration: 0.16,
+    dustScale: 0.38, impactSoundScale: 0.32,
+  },
+  officeChair: {
+    shakePositionScale: 0.62, shakeRotationScale: 1.45, verticalShakeScale: 0.35,
+    toppleThreshold: 0.4, toppleRateBase: 0.02, toppleRateScale: 0.38,
+    lateralImpulse: 1.0, spinImpulse: 1.6, gravity: 9.2, airDrag: 0.2, airRotationDrag: 0.11,
+    rebound: 0.02, maxRebound: 0.22, groundFriction: 5.8, groundRotationFriction: 4.3,
+    linearSettleSq: 0.003, angularSettleSq: 0.015, settleDuration: 0.3,
+    dustScale: 0.72, impactSoundScale: 1.0,
+  },
+  guestChair: {
+    shakePositionScale: 0.58, shakeRotationScale: 1.15, verticalShakeScale: 0.3,
+    toppleThreshold: 0.4, toppleRateBase: 0.018, toppleRateScale: 0.34,
+    lateralImpulse: 0.72, spinImpulse: 1.25, gravity: 9.2, airDrag: 0.28, airRotationDrag: 0.14,
+    rebound: 0.018, maxRebound: 0.18, groundFriction: 6.2, groundRotationFriction: 5.0,
+    linearSettleSq: 0.0025, angularSettleSq: 0.012, settleDuration: 0.28,
+    dustScale: 0.72, impactSoundScale: 0.9,
+  },
+  plant: {
+    shakePositionScale: 1.1, shakeRotationScale: 1.6, verticalShakeScale: 0.7,
+    toppleThreshold: 0.25, toppleRateBase: 0.07, toppleRateScale: 0.7,
+    lateralImpulse: 0.78, spinImpulse: 1.1, gravity: 8.2, airDrag: 0.25, airRotationDrag: 0.16,
+    rebound: 0.012, maxRebound: 0.14, groundFriction: 3.8, groundRotationFriction: 4.2,
+    linearSettleSq: 0.003, angularSettleSq: 0.015, settleDuration: 0.24,
+    dustScale: 1.25, impactSoundScale: 0.72,
+  },
+  heater: {
+    shakePositionScale: 0.4, shakeRotationScale: 0.55, verticalShakeScale: 0.25,
+    toppleThreshold: 0.65, toppleRateBase: 0.008, toppleRateScale: 0.16,
+    lateralImpulse: 0.38, spinImpulse: 0.62, gravity: 9.2, airDrag: 0.35, airRotationDrag: 0.2,
+    rebound: 0.008, maxRebound: 0.08, groundFriction: 7.0, groundRotationFriction: 6.5,
+    linearSettleSq: 0.002, angularSettleSq: 0.01, settleDuration: 0.32,
+    dustScale: 0.5, impactSoundScale: 0.7,
+  },
+};
+
 function registerPhysicsObject(object, options = {}) {
   if (!object) return;
 
@@ -747,6 +828,8 @@ function registerPhysicsObject(object, options = {}) {
     stability: options.stability ?? 0.6,
     allowTopple: options.allowTopple ?? true,
     label: options.label ?? object.name ?? "Object",
+    profileName: options.profile ?? "generic",
+    motionProfile: PHYSICS_PROFILES[options.profile ?? "generic"] ?? PHYSICS_PROFILES.generic,
     basePosition,
     baseRotation,
     baseMinOffset,
@@ -772,7 +855,8 @@ function registerPhysicsObject(object, options = {}) {
 function applyObjectShake(intensity, time, delta) {
   physicsObjects.forEach((object) => {
     const data = object.userData.physics;
-    if (!data) return;
+    if (!data || (data.toppled && data.settled)) return;
+    const profile = data.motionProfile;
 
     object.position.sub(data.shakeOffset);
     object.rotation.x -= data.shakeRotation.x;
@@ -786,19 +870,20 @@ function applyObjectShake(intensity, time, delta) {
       return;
     }
 
-    const massFactor = 1 / Math.max(1.0, data.mass);
+    const massFactor = 1 / Math.sqrt(Math.max(1.0, data.mass));
     const shakeStrength = intensity * massFactor * 2.1;
     const t = time + data.seed;
+    const movementScale = profile.shakePositionScale;
 
     data.shakeOffset.set(
-      Math.sin(t * 7.0) * 0.03 * shakeStrength,
-      Math.sin(t * 11.0) * 0.02 * shakeStrength,
-      Math.cos(t * 9.0) * 0.03 * shakeStrength
+      Math.sin(t * 7.0) * 0.03 * shakeStrength * movementScale,
+      Math.sin(t * 11.0) * 0.02 * shakeStrength * movementScale * profile.verticalShakeScale,
+      Math.cos(t * 9.0) * 0.03 * shakeStrength * movementScale
     );
     data.shakeRotation.set(
-      Math.sin(t * 6.0) * 0.03 * shakeStrength,
-      Math.cos(t * 5.0) * 0.02 * shakeStrength,
-      Math.sin(t * 8.0) * 0.03 * shakeStrength
+      Math.sin(t * 6.0) * 0.03 * shakeStrength * profile.shakeRotationScale,
+      Math.cos(t * 5.0) * 0.02 * shakeStrength * profile.shakeRotationScale,
+      Math.sin(t * 8.0) * 0.03 * shakeStrength * profile.shakeRotationScale
     );
 
     object.position.add(data.shakeOffset);
@@ -807,29 +892,36 @@ function applyObjectShake(intensity, time, delta) {
     object.rotation.z += data.shakeRotation.z;
 
     const toppleRisk = intensity * (1 - data.stability);
-    const toppleChance = 0.012 + toppleRisk * 0.08;
-    if (data.allowTopple && toppleRisk > 0.48 && Math.random() < toppleChance) {
+    // Convert chance to a rate so toppling is less dependent on display frame rate.
+    const toppleRate = profile.toppleRateBase + toppleRisk * profile.toppleRateScale;
+    const toppleChance = 1 - Math.exp(-toppleRate * Math.min(Math.max(delta, 0), 0.05));
+    if (
+      data.allowTopple &&
+      toppleRisk > profile.toppleThreshold &&
+      Math.random() < toppleChance
+    ) {
       data.toppled = true;
       data.velocity.set(
-        (Math.random() - 0.5) * (0.8 + intensity * 1.1),
+        (Math.random() - 0.5) * profile.lateralImpulse * (0.7 + intensity),
         0,
-        (Math.random() - 0.5) * (0.8 + intensity * 1.1)
+        (Math.random() - 0.5) * profile.lateralImpulse * (0.7 + intensity)
       );
+      // Items tumble more; larger furniture usually tips with a slower rotation.
       data.rotationVelocity.set(
-        (Math.random() + 0.2) * (1.4 + intensity * 1.6),
-        (Math.random() - 0.5) * (0.8 + intensity),
-        (Math.random() - 0.5) * (0.8 + intensity)
+        (Math.random() - 0.35) * profile.spinImpulse * (0.8 + intensity),
+        (Math.random() - 0.5) * profile.spinImpulse * 0.45,
+        (Math.random() - 0.35) * profile.spinImpulse * (0.8 + intensity)
       );
       data.grounded = false;
       data.settled = false;
       data.impactPlayed = false;
       data.bounceCount = 0;
       data.settleTimer = 0;
-      createDustBurst(object.position, Math.min(0.45, intensity * 0.35));
+      createDustBurst(object.position, Math.min(0.65, intensity * 0.35 * profile.dustScale));
       logDecision("object_toppled", `${data.label} toppled`);
     }
 
-    applyDamage(object, data, intensity);
+    applyDamage(object, data, intensity, delta);
   });
 }
 
@@ -839,14 +931,14 @@ function updateToppledObject(object, data, delta) {
   // Clamp frame time after tab stalls so a single long frame cannot launch objects
   // through the floor. This is a lightweight game approximation, not rigid-body physics.
   const dt = Math.min(Math.max(delta, 0), 0.05);
-  const gravity = -9.0;
+  const profile = data.motionProfile;
   data.toppleAge += dt;
-  data.velocity.y += gravity * dt;
-  data.velocity.x *= Math.exp(-0.18 * dt);
-  data.velocity.z *= Math.exp(-0.18 * dt);
+  data.velocity.y -= profile.gravity * dt;
+  data.velocity.x *= Math.exp(-profile.airDrag * dt);
+  data.velocity.z *= Math.exp(-profile.airDrag * dt);
   object.position.addScaledVector(data.velocity, dt);
 
-  const airRotationDamping = Math.exp(-0.12 * dt);
+  const airRotationDamping = Math.exp(-profile.airRotationDrag * dt);
   object.rotation.x += data.rotationVelocity.x * dt;
   object.rotation.y += data.rotationVelocity.y * dt;
   object.rotation.z += data.rotationVelocity.z * dt;
@@ -865,14 +957,14 @@ function updateToppledObject(object, data, delta) {
         groundPlaneY + 0.02,
         object.position.z
       );
-      createDustBurst(impactPosition, impactStrength);
-      playImpactSound(impactStrength);
+      createDustBurst(impactPosition, impactStrength * profile.dustScale);
+      playImpactSound(impactStrength * profile.impactSoundScale);
       logDecision("object_impact", data.label + " hit the floor");
     }
 
     // A single small rebound makes impacts readable without allowing endless bouncing.
-    if (data.bounceCount === 0 && impactSpeed > 1.6) {
-      data.velocity.y = Math.min(0.55, impactSpeed * 0.06);
+    if (data.bounceCount === 0 && impactSpeed > 1.6 && profile.rebound > 0) {
+      data.velocity.y = Math.min(profile.maxRebound, impactSpeed * profile.rebound);
       data.bounceCount += 1;
       data.grounded = false;
     } else {
@@ -884,8 +976,8 @@ function updateToppledObject(object, data, delta) {
   }
 
   if (data.grounded) {
-    const horizontalDamping = Math.exp(-4.2 * dt);
-    const rotationDamping = Math.exp(-5.0 * dt);
+    const horizontalDamping = Math.exp(-profile.groundFriction * dt);
+    const rotationDamping = Math.exp(-profile.groundRotationFriction * dt);
     data.velocity.x *= horizontalDamping;
     data.velocity.z *= horizontalDamping;
     data.rotationVelocity.multiplyScalar(rotationDamping);
@@ -897,9 +989,9 @@ function updateToppledObject(object, data, delta) {
       data.rotationVelocity.y * data.rotationVelocity.y +
       data.rotationVelocity.z * data.rotationVelocity.z;
 
-    if (horizontalSpeedSq < 0.0025 && angularSpeedSq < 0.012) {
+    if (horizontalSpeedSq < profile.linearSettleSq && angularSpeedSq < profile.angularSettleSq) {
       data.settleTimer += dt;
-      if (data.settleTimer >= 0.22) {
+      if (data.settleTimer >= profile.settleDuration) {
         data.velocity.set(0, 0, 0);
         data.rotationVelocity.set(0, 0, 0);
         data.settled = true;
@@ -942,10 +1034,12 @@ function relaxObjects(delta) {
   });
 }
 
-function applyDamage(object, data, intensity) {
+function applyDamage(object, data, intensity, delta) {
   if (intensity < 0.55 || data.broken) return;
 
-  const chance = intensity * (1 - data.stability) * 0.02;
+  // Damage accumulation is time-based, not one random roll per rendered frame.
+  const damageRate = intensity * (1 - data.stability) * 0.85;
+  const chance = 1 - Math.exp(-damageRate * Math.min(Math.max(delta, 0), 0.05));
   if (Math.random() < chance) {
     data.damaged = Math.min(1, data.damaged + intensity * 0.15);
 
@@ -1986,6 +2080,7 @@ async function createRoom() {
     stability: 0.95,
     allowTopple: false,
     label: "Desk",
+    profile: "desk",
   });
 
   createShelterZoneForObject(desk);
@@ -1998,7 +2093,7 @@ async function createRoom() {
   if (loadedModels.monitor) {
     monitor = loadedModels.monitor;
     monitor.name = "monitor";
-    room.add(monitor);
+    monitorAssembly.add(monitor);
   } else {
     const monitorData = createFallbackMonitor();
     monitor = monitorData.monitor;
@@ -2024,18 +2119,21 @@ async function createRoom() {
     stability: 0.2,
     allowTopple: true,
     label: "Monitor",
+    profile: "monitor",
   });
   registerPhysicsObject(keyboard, {
     mass: 1.8,
     stability: 0.4,
     allowTopple: true,
     label: "Keyboard",
+    profile: "smallItem",
   });
   registerPhysicsObject(computerMouse, {
     mass: 1.1,
     stability: 0.35,
     allowTopple: true,
     label: "Mouse",
+    profile: "smallItem",
   });
 
   if (loadedModels.chair) {
@@ -2045,6 +2143,7 @@ async function createRoom() {
       stability: 0.6,
       allowTopple: true,
       label: "Office chair",
+      profile: "officeChair",
     });
   } else {
     const fallbackChair = createFallbackChair();
@@ -2053,6 +2152,7 @@ async function createRoom() {
       stability: 0.55,
       allowTopple: true,
       label: "Chair",
+      profile: "officeChair",
     });
   }
 
@@ -2063,6 +2163,7 @@ async function createRoom() {
       stability: 0.5,
       allowTopple: true,
       label: "Guest chair",
+      profile: "guestChair",
     });
   }
 
@@ -2083,6 +2184,7 @@ async function createRoom() {
       stability: 0.25,
       allowTopple: true,
       label: "Plant",
+      profile: "plant",
     });
   }
 
@@ -2096,6 +2198,7 @@ async function createRoom() {
       stability: 0.6,
       allowTopple: true,
       label: "Heater",
+      profile: "heater",
     });
   } else {
     const fallbackHeater = createFallbackHeater();
@@ -2200,6 +2303,8 @@ function createFallbackDesk() {
 }
 
 function createFallbackMonitor() {
+  const monitorAssembly = new THREE.Group();
+  monitorAssembly.name = "monitor";
   const monitorGeometry = new THREE.BoxGeometry(0.55, 0.38, 0.04);
   const monitorMaterial = new THREE.MeshStandardMaterial({
     color: 0x1a1a1a,
@@ -2225,7 +2330,7 @@ function createFallbackMonitor() {
   const screen = new THREE.Mesh(screenGeometry, screenMaterial);
   screen.position.set(0, 0.98, -0.155);
   screen.rotation.x = -0.08;
-  room.add(screen);
+  monitorAssembly.add(screen);
 
   const neckGeometry = new THREE.BoxGeometry(0.06, 0.15, 0.06);
   const standMaterial = new THREE.MeshStandardMaterial({
@@ -2235,12 +2340,13 @@ function createFallbackMonitor() {
   });
   const neck = new THREE.Mesh(neckGeometry, standMaterial);
   neck.position.set(0, 0.855, -0.18);
-  room.add(neck);
+  monitorAssembly.add(neck);
 
   const baseGeometry = new THREE.CylinderGeometry(0.12, 0.14, 0.02, 24);
   const base = new THREE.Mesh(baseGeometry, standMaterial);
   base.position.set(0, 0.785, -0.18);
-  room.add(base);
+  monitorAssembly.add(base);
+  room.add(monitorAssembly);
 
   const keyboardGeometry = new THREE.BoxGeometry(0.42, 0.015, 0.14);
   const keyboardMaterial = new THREE.MeshStandardMaterial({
@@ -2265,7 +2371,7 @@ function createFallbackMonitor() {
   computerMouse.castShadow = true;
   room.add(computerMouse);
 
-  return { monitor, screen, keyboard, mouse: computerMouse };
+  return { monitor: monitorAssembly, screen, keyboard, mouse: computerMouse };
 }
 
 function createFallbackChair() {
