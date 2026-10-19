@@ -762,6 +762,7 @@ function registerPhysicsObject(object, options = {}) {
     impactPlayed: false,
     bounceCount: 0,
     settleTimer: 0,
+    toppleAge: 0,
     seed: Math.random() * Math.PI * 2,
   };
 
@@ -917,7 +918,10 @@ function relaxObjects(delta) {
     const data = object.userData.physics;
     if (!data) return;
 
-    if (data.toppled) return;
+    if (data.toppled) {
+      updateToppledObject(object, data, delta);
+      return;
+    }
 
     object.position.lerp(data.basePosition, delta * 2.5);
     object.rotation.x = THREE.MathUtils.lerp(
