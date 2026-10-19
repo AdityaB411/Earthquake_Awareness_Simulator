@@ -2886,6 +2886,8 @@ async function runRoomTour() {
 }
 
 function startScenario() {
+  if (timerStarted || scenarioEnded) return;
+
   const startBtn = document.getElementById("startScenarioBtn");
   if (startBtn) startBtn.style.display = "none";
 
