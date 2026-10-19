@@ -440,6 +440,8 @@ function buildQuakeTimeline() {
     totalQuakeDuration += duration;
     nextStart += duration + randomRange(6, 12);
   }
+
+  responseScoreOpportunity = Math.max(30, quakeTimeline.length * 30);
 }
 
 function getMagnitudeScale(magnitude) {
@@ -821,7 +823,8 @@ function awardCoverPoints(responseTime) {
   activeQuake.coverScored = true;
 
   const points = responseTime < 2 ? 30 : responseTime < 5 ? 20 : 10;
-  coverResponseScore = Math.min(120, coverResponseScore + points);
+  coverResponseRawScore += points;
+  coverResponseScore = Math.round(Math.min(1, coverResponseRawScore / responseScoreOpportunity) * 120);
   userScore = coverResponseScore;
 }
 
@@ -830,6 +833,8 @@ let timerStarted = false;
 let startTime = 0;
 let userScore = 0;
 let coverResponseScore = 0;
+let coverResponseRawScore = 0;
+let responseScoreOpportunity = 120;
 let coverDurationScore = 0;
 let decisionLog = [];
 let postKnowledgeScore = null;
@@ -2443,6 +2448,7 @@ function startScenario() {
   coverTimeTotal = 0;
   userScore = 0;
   coverResponseScore = 0;
+  coverResponseRawScore = 0;
   coverDurationScore = 0;
   decisionLog = [];
   timerStarted = true;
