@@ -10,10 +10,12 @@ A laptop-friendly, browser-based 3D earthquake-preparedness training prototype a
 - 3D office environment with furniture and fallback models
 - Randomized main-shock and aftershock sequence
 - Visual camera/object shaking and heuristic object-toppling/damage cues
-- Take-cover interaction with response-time and cover-duration scoring
-- End-of-run summary and decision log
-- Optional three-question post-scenario safety knowledge check with explanations
-- User-triggered CSV report download including the knowledge-check score
+- Guided first-person practice and challenge modes
+- Practice, standard, and intense earthquake-sequence presets
+- Live training objectives and a post-shaking hazard-scan checklist
+- End-of-run score, decision log, and three-question safety knowledge check with explanations
+- User-triggered CSV report with escaped fields and the knowledge-check score
+- WebXR entry button, controller-trigger interactions, thumbstick movement, and an in-world start/settings panel when DOM overlays are unavailable
 - Local browser-only operation; no server-side account or training-data storage is implemented
 
 ## Requirements
@@ -28,7 +30,17 @@ npm install
 npm run dev
 ```
 
-Open the local URL printed by Vite (normally http://localhost:5173).
+Open the local URL printed by Vite (normally http://localhost:5173). Use localhost for local browser testing because modern browsers treat it as a secure context.
+
+## WebXR testing without a headset
+
+1. Use a Chromium-based desktop browser such as Chrome or Edge.
+2. Install the [Meta Quest Immersive Web Emulator](https://github.com/meta-quest/immersive-web-emulator) extension from its official project links.
+3. Run the app locally with npm install and npm run dev, then open the Vite localhost URL.
+4. Open the emulator developer interface, select a supported headset/controller profile, and enter immersive VR using the app's WebXR button.
+5. Use the emulated controller to point at the in-world mode/difficulty controls and START SCENARIO; test thumbstick locomotion, desk interaction, hazard inspection, and exit behavior.
+
+The emulator is useful for checking WebXR API wiring and input logic, but it is not a substitute for testing comfort, frame rate, tracking, and interaction on a real headset. The project includes an in-world interface fallback because the emulator currently lists DOM overlays as unsupported.
 
 ## Build and preview
 
@@ -69,7 +81,7 @@ The container serves the app on port 8080.
 
 ## Suggested course-project improvements
 
-- Validate WebXR with an explicit desktop fallback
+- Validate WebXR on the emulator and then, if available, a physical headset
 - Teach and assess Drop, Cover, and Hold On with clear in-simulation explanations
 - Compare pre-test and post-test results in a future iteration so learning outcomes can be measured
 - Provide a transparent scoring rubric and scenario debrief
