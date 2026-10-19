@@ -890,7 +890,8 @@ function updateStatus() {
     const elapsed = timerStarted ? (Date.now() - scenarioStartTime) / 1000 : 0;
     const mainQuakeHasStarted = decisionLog.some((entry) => entry.action === "quake_started");
     if (!mainQuakeHasStarted && elapsed < quakeTimeline[0].start) {
-      statusDiv.textContent = "Get ready: locate a sturdy desk and prepare to take cover.";
+      const secondsUntilQuake = Math.max(1, Math.ceil(quakeTimeline[0].start - elapsed));
+      statusDiv.textContent = "Get ready: earthquake begins in " + secondsUntilQuake + " s. Locate cover.";
       statusDiv.style.color = "#00d4ff";
       statusDiv.style.borderColor = "#00d4ff";
     } else {
