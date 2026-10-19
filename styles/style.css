@@ -208,3 +208,28 @@ canvas {
 #userSurname {
   pointer-events: auto;
 }
+
+/* WebXR entry point provided by Three.js VRButton. */
+#webxr-vr-button {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 1000;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 10px;
+  padding: 12px 18px;
+  background: rgba(0, 0, 0, 0.82);
+  color: #fff;
+  font: 600 14px Arial, sans-serif;
+  cursor: pointer;
+}
+
+#webxr-vr-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+body:has(#webxr-vr-button:focus-visible) #webxr-vr-button {
+  outline: 3px solid #00d4ff;
+  outline-offset: 3px;
+}
