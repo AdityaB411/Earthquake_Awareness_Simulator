@@ -820,19 +820,17 @@ function awardCoverPoints(responseTime) {
 
   activeQuake.coverScored = true;
 
-  if (responseTime < 2) {
-    userScore += 30;
-  } else if (responseTime < 5) {
-    userScore += 20;
-  } else {
-    userScore += 10;
-  }
+  const points = responseTime < 2 ? 30 : responseTime < 5 ? 20 : 10;
+  coverResponseScore = Math.min(120, coverResponseScore + points);
+  userScore = coverResponseScore;
 }
 
 // ==================== TIMING AND SCORING ====================
 let timerStarted = false;
 let startTime = 0;
 let userScore = 0;
+let coverResponseScore = 0;
+let coverDurationScore = 0;
 let decisionLog = [];
 let postKnowledgeScore = null;
 let lastScenarioReport = null;
@@ -919,8 +917,8 @@ function endScenario(result) {
 
   const totalTime = ((Date.now() - startTime) / 1000).toFixed(1);
   const coverRatio = totalQuakeDuration > 0 ? coverTimeTotal / totalQuakeDuration : 0;
-  const coverScore = Math.round(Math.min(1, coverRatio) * 60);
-  userScore = Math.min(180, userScore + coverScore);
+  coverDurationScore = Math.round(Math.min(1, coverRatio) * 60);
+  userScore = Math.min(180, coverResponseScore + coverDurationScore);
 
   const toppledCount = physicsObjects.filter(
     (obj) => obj.userData.physics && obj.userData.physics.toppled
@@ -964,6 +962,8 @@ function endScenario(result) {
   resultTitle.style.color = color;
   resultText.textContent = text;
   scoreText.textContent = `Total score: ${userScore} / 180`;
+  const scoreBreakdown = document.getElementById("scoreBreakdown");
+  if (scoreBreakdown) scoreBreakdown.textContent = `Response to shaking: ${coverResponseScore} / 120 · Time protected: ${coverDurationScore} / 60`;
   timeText.textContent = `Total time: ${totalTime} seconds`;
 
   let logHTML = "<h4>Decision Log:</h4><ul>";
@@ -982,6 +982,8 @@ function endScenario(result) {
   lastScenarioReport = {
     totalTime,
     score: userScore,
+    coverResponseScore,
+    coverDurationScore,
     resultText: title + " - " + text,
     toppledCount,
     damagedCount,
@@ -1021,6 +1023,8 @@ function exportToCSV(totalTime, score, resultText, toppledCount, damagedCount) {
   csvContent += csvCell("Date") + ";" + csvCell(user.startTime) + "\n";
   csvContent += csvCell("Total time") + ";" + csvCell(totalTime + " seconds") + "\n";
   csvContent += csvCell("Score") + ";" + csvCell(score) + "\n";
+  csvContent += csvCell("Response to shaking") + ";" + csvCell(coverResponseScore + " / 120") + "\n";
+  csvContent += csvCell("Time protected") + ";" + csvCell(coverDurationScore + " / 60") + "\n";
   csvContent += csvCell("Objects toppled") + ";" + csvCell(toppledCount) + "\n";
   csvContent += csvCell("Objects damaged") + ";" + csvCell(damagedCount) + "\n";
   csvContent += csvCell("Result") + ";" + csvCell(resultText) + "\n\n";
@@ -2438,6 +2442,8 @@ function startScenario() {
   coverUsed = false;
   coverTimeTotal = 0;
   userScore = 0;
+  coverResponseScore = 0;
+  coverDurationScore = 0;
   decisionLog = [];
   timerStarted = true;
 
@@ -2644,6 +2650,8 @@ document.getElementById("tryAgainBtn")?.addEventListener("click", () => location
 document.getElementById("downloadReportBtn")?.addEventListener("click", () => {
   if (!lastScenarioReport) return;
   const report = lastScenarioReport;
+  coverResponseScore = report.coverResponseScore;
+  coverDurationScore = report.coverDurationScore;
   exportToCSV(report.totalTime, report.score, report.resultText, report.toppledCount, report.damagedCount);
 });
 
