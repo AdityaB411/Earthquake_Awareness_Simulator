@@ -233,3 +233,124 @@ body:has(#webxr-vr-button:focus-visible) #webxr-vr-button {
   outline: 3px solid #00d4ff;
   outline-offset: 3px;
 }
+
+
+/* Guided safety knowledge check and report actions */
+.knowledge-check {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  overflow-y: auto;
+  padding: 24px 16px;
+  background: rgba(4, 8, 18, 0.97);
+  color: #fff;
+}
+
+.knowledge-check-card {
+  max-width: 760px;
+  margin: 24px auto;
+  padding: 28px;
+  border: 2px solid #00d4ff;
+  border-radius: 18px;
+  background: #141a2d;
+}
+
+.assessment-eyebrow {
+  margin-bottom: 8px;
+  color: #00d4ff;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+}
+
+.knowledge-check-card h2 {
+  margin-bottom: 12px;
+  font-size: clamp(24px, 4vw, 34px);
+}
+
+.assessment-intro,
+.assessment-feedback {
+  margin: 12px 0 20px;
+  line-height: 1.6;
+  color: #dce4f0;
+}
+
+.assessment-question {
+  margin: 16px 0;
+  padding: 16px;
+  border: 1px solid #47536b;
+  border-radius: 12px;
+}
+
+.assessment-question legend {
+  padding: 0 6px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.assessment-option {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  margin: 12px 0;
+  cursor: pointer;
+  line-height: 1.5;
+}
+
+.assessment-option input {
+  margin-top: 4px;
+  accent-color: #00d4ff;
+}
+
+.assessment-explanation {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #47536b;
+  color: #9ee6bd;
+  line-height: 1.5;
+}
+
+#assessmentSubmit,
+.result-actions button {
+  margin: 8px 8px 0 0;
+  padding: 12px 16px;
+  border: 0;
+  border-radius: 9px;
+  background: #168b61;
+  color: white;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+#assessmentSubmit:focus-visible,
+.result-actions button:focus-visible {
+  outline: 3px solid #00d4ff;
+  outline-offset: 3px;
+}
+
+#downloadReportBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.knowledge-check-summary {
+  margin-top: 18px;
+  color: #8de0ff;
+  text-align: center;
+  font-weight: 700;
+}
+
+.result-actions {
+  margin-top: 24px;
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+@media (max-width: 560px) {
+  .knowledge-check-card {
+    padding: 18px;
+  }
+}
