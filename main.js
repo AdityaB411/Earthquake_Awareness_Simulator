@@ -167,6 +167,7 @@ function updateFirstPersonMovement(delta) {
     return;
   }
   if (!controls.isLocked) return;
+  delta = Math.min(Math.max(delta, 0), 0.05);
 
   if (coverActive && coverTarget) {
     // Keep the player tucked under cover while crouched
@@ -692,6 +693,7 @@ function computeIntensity(quake, elapsed) {
 
 function updateEarthquake(delta) {
   if (scenarioEnded) return;
+  const frameDelta = Math.min(Math.max(delta, 0), 0.05);
 
   const scenarioElapsed = (Date.now() - scenarioStartTime) / 1000;
 
@@ -716,16 +718,16 @@ function updateEarthquake(delta) {
     const effectiveIntensity = intensity * coverMultiplier;
 
     applyCameraShake(effectiveIntensity, scenarioElapsed);
-    applyObjectShake(intensity, scenarioElapsed, delta);
-    updateAtmosphere(intensity, delta, scenarioElapsed);
+    applyObjectShake(intensity, scenarioElapsed, frameDelta);
+    updateAtmosphere(intensity, frameDelta, scenarioElapsed);
     updateRumble(intensity);
 
     if (coverActive) {
-      coverTimeTotal += delta;
+      coverTimeTotal += frameDelta;
     }
   } else {
     relaxObjects(delta);
-    updateAtmosphere(0, delta, scenarioElapsed);
+    updateAtmosphere(0, frameDelta, scenarioElapsed);
   }
 
   updateCoverState();
@@ -1597,6 +1599,30 @@ async function init() {
 
   controls.addEventListener("unlock", function () {
     isLocked = false;
+    moveState.forward = false;
+    moveState.backward = false;
+    moveState.left = false;
+    moveState.right = false;
+  });
+
+  let visibilityPauseStart = null;
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden && !(renderer && renderer.xr.isPresenting)) {
+      if (visibilityPauseStart === null) visibilityPauseStart = Date.now();
+      moveState.forward = false;
+      moveState.backward = false;
+      moveState.left = false;
+      moveState.right = false;
+      stopRumble();
+      resetCameraShake();
+    } else if (!document.hidden && visibilityPauseStart !== null) {
+      const pausedFor = Date.now() - visibilityPauseStart;
+      if (timerStarted && !scenarioEnded) {
+        scenarioStartTime += pausedFor;
+        startTime += pausedFor;
+      }
+      visibilityPauseStart = null;
+    }
   });
 
   window.addEventListener("keydown", onKeyDown);
@@ -1878,6 +1904,7 @@ function getPlayerWorldPosition(target = new THREE.Vector3()) {
 
 function updateXRMovement(delta) {
   if (!renderer || !renderer.xr.isPresenting || !playerRig || coverActive) return;
+  delta = Math.min(Math.max(delta, 0), 0.05);
   const session = renderer.xr.getSession();
   if (!session) return;
 
@@ -2724,6 +2751,10 @@ function animate() {
 function scanVisibleHazards() {
   if (!awaitingExit) {
     showMessage("Wait until all shaking stops before checking the room for hazards.", 2200);
+    return;
+  }
+  if (decisionLog.some((entry) => entry.action === "hazard_scan_complete")) {
+    showMessage("Hazard scan already completed. Review the checklist before exiting.", 1800);
     return;
   }
   const hazards = physicsObjects.filter((object) => {
