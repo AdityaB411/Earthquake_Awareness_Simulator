@@ -9,7 +9,7 @@ A laptop-friendly, browser-based 3D earthquake-preparedness training prototype a
 - First-person desktop navigation with WASD and mouse pointer lock
 - 3D office environment with furniture and fallback models
 - Randomized main-shock and aftershock sequence
-- Visual camera/object shaking, ambient dust motes and impact bursts, flickering/dimming office lights, and layered procedural rumble/impact sounds. Toppled objects now use transformed bounds for floor contact, a limited rebound, impact cues, and damped settling that continues after shaking stops
+- Visual camera/object shaking, ambient dust motes and impact bursts, flickering/dimming office lights, and layered procedural rumble/impact sounds. Type-specific motion profiles distinguish monitors, small desk items, office/guest chairs, plants, heaters, and desks; toppling and damage probabilities are time-based to reduce frame-rate dependence. Toppled objects use transformed bounds for floor contact, profile-specific rebound/friction, impact cues, and damped settling that continues after shaking stops
 - Guided first-person practice and challenge modes
 - Practice, standard, and intense earthquake-sequence presets with a six-second preparation countdown
 - Live training objectives and a post-shaking hazard-scan checklist
@@ -77,8 +77,9 @@ The container serves the app on port 8080.
 3. **Physics are approximate.** Event magnitudes/durations and object topple/damage events are generated procedurally. They should not be presented as real earthquake predictions or scientifically accurate structural responses.
 4. **Assessment is educational.** The short knowledge check reinforces safety guidance but is not a validated readiness test or certification.
 5. **Scoring is heuristic.** The score normalizes response-time performance across scenario lengths (up to 120 points) and adds time-protected points (up to 60), for a maximum of 180. It represents actions inside this prototype, not a validated measure of real-world readiness.
-6. **Effects are stylized and performance-sensitive.** Dust, light flicker, object falls, and synthesized sounds are procedural cues, not real debris physics or recorded earthquake audio. Test visuals and frame rate on the target laptop and in immersive WebXR; reduce particle counts or flicker intensity if performance or comfort suffers.
-7. **Asset attribution should be verified.** The code is MIT-licensed, but confirm the licences/attributions for each bundled 3D model and environment asset before redistributing the project publicly.
+6. **Object motion is an approximation.** Each object category has a tuned profile for shake, tipping, rebound, friction, and settling, but the scene does not solve full rigid-body collisions or accurately model each asset's centre of mass. Imported model pivots and bounding boxes still need visual review.
+7. **Effects are stylized and performance-sensitive.** Dust, light flicker, object falls, and synthesized sounds are procedural cues, not real debris physics or recorded earthquake audio. Test visuals and frame rate on the target laptop and in immersive WebXR; reduce particle counts or flicker intensity if performance or comfort suffers.
+8. **Asset attribution should be verified.** The code is MIT-licensed, but confirm the licences/attributions for each bundled 3D model and environment asset before redistributing the project publicly.
 
 ## Suggested course-project improvements
 
