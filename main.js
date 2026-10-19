@@ -2239,6 +2239,7 @@ async function createRoom() {
   if (loadedModels.monitor) {
     monitor = loadedModels.monitor;
     monitor.name = "monitor";
+    if (!loadedModels.desk) monitor.position.set(0, 0.9, -0.18);
     room.add(monitor);
   } else {
     monitor = createFallbackMonitor(Boolean(loadedModels.desk));
@@ -2249,6 +2250,7 @@ async function createRoom() {
     // movable assembly rather than pretending the GLB exposes two separate props.
     keyboard = loadedModels.keyboard;
     keyboard.name = "keyboardMouse";
+    if (!loadedModels.desk) keyboard.position.z = 0.12;
     room.add(keyboard);
   } else {
     const inputProps = createFallbackKeyboardAndMouse(Boolean(loadedModels.desk));
