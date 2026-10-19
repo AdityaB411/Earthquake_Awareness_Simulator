@@ -469,3 +469,11 @@ body:has(#webxr-vr-button:focus-visible) #webxr-vr-button {
     padding: 10px;
   }
 }
+
+
+.score-breakdown {
+  margin-top: 8px;
+  color: #dce4f0;
+  font-size: 13px;
+  line-height: 1.5;
+}
