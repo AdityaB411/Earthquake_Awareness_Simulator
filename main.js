@@ -797,6 +797,8 @@ let timerStarted = false;
 let startTime = 0;
 let userScore = 0;
 let decisionLog = [];
+let postKnowledgeScore = null;
+let lastScenarioReport = null;
 
 function logDecision(action, description) {
   decisionLog.push({
@@ -926,14 +928,16 @@ function endScenario(result) {
 
   if (controls) controls.unlock();
 
-  setTimeout(() => {
-    try {
-      const finalResultText = `${title} - ${text}`;
-      exportToCSV(totalTime, userScore, finalResultText, toppledCount, damagedCount);
-    } catch (e) {
-      console.error("Failed to generate the training report:", e);
-    }
-  }, 500);
+  lastScenarioReport = {
+    totalTime,
+    score: userScore,
+    resultText: title + " - " + text,
+    toppledCount,
+    damagedCount,
+  };
+
+  const reportButton = document.getElementById("downloadReportBtn");
+  if (reportButton) reportButton.disabled = false;
 }
 
 function exportToCSV(totalTime, score, resultText, toppledCount, damagedCount) {
@@ -978,6 +982,8 @@ function exportToCSV(totalTime, score, resultText, toppledCount, damagedCount) {
     const desc = log.description.replace(/;/g, ",");
     csvContent += `${time};${log.action};${desc}\n`;
   });
+
+  csvContent += "Knowledge check score;" + (postKnowledgeScore === null ? "Not completed" : postKnowledgeScore + "/3") + "\n";
 
   const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
@@ -2021,6 +2027,142 @@ window.earthquakeSimulation = {
 };
 
 window.validateAndStart = validateAndStart;
+
+
+const knowledgeQuestions = [
+  {
+    prompt: "When shaking begins, what should you do first?",
+    options: [
+      "Run outside immediately",
+      "Drop to your hands and knees and protect your head and neck",
+      "Stand in a doorway and wait"
+    ],
+    correct: 1,
+    explanation: "Drop, Cover, and Hold On. Protect your head and neck as soon as shaking starts."
+  },
+  {
+    prompt: "If a sturdy desk or table is nearby during shaking, what should you do?",
+    options: [
+      "Get underneath it and hold on",
+      "Stand beside a window",
+      "Run across the room to collect belongings"
+    ],
+    correct: 0,
+    explanation: "If possible, take cover under a sturdy desk or table and hold on until shaking stops."
+  },
+  {
+    prompt: "What should you do after the shaking stops?",
+    options: [
+      "Rush toward the nearest exit without looking around",
+      "Assume there will be no aftershocks",
+      "Check for hazards and leave carefully when it is safe"
+    ],
+    correct: 2,
+    explanation: "Look for hazards, expect possible aftershocks, and evacuate carefully when safe."
+  }
+];
+
+function openKnowledgeCheck() {
+  const panel = document.getElementById("knowledgeCheck");
+  const questionsContainer = document.getElementById("assessmentQuestions");
+  const feedback = document.getElementById("assessmentFeedback");
+  const submitButton = document.getElementById("assessmentSubmit");
+  if (!panel || !questionsContainer || !feedback || !submitButton) return;
+
+  questionsContainer.replaceChildren();
+  feedback.textContent = "";
+  submitButton.textContent = "Submit answers";
+  submitButton.dataset.completed = "false";
+  postKnowledgeScore = null;
+
+  knowledgeQuestions.forEach((question, questionIndex) => {
+    const fieldset = document.createElement("fieldset");
+    fieldset.className = "assessment-question";
+    const legend = document.createElement("legend");
+    legend.textContent = (questionIndex + 1) + ". " + question.prompt;
+    fieldset.appendChild(legend);
+
+    question.options.forEach((option, optionIndex) => {
+      const label = document.createElement("label");
+      label.className = "assessment-option";
+      const input = document.createElement("input");
+      input.type = "radio";
+      input.name = "knowledge-question-" + questionIndex;
+      input.value = String(optionIndex);
+      label.append(input, document.createTextNode(option));
+      fieldset.appendChild(label);
+    });
+
+    questionsContainer.appendChild(fieldset);
+  });
+
+  panel.style.display = "block";
+  panel.setAttribute("aria-hidden", "false");
+}
+
+function submitKnowledgeCheck() {
+  const panel = document.getElementById("knowledgeCheck");
+  const questionsContainer = document.getElementById("assessmentQuestions");
+  const feedback = document.getElementById("assessmentFeedback");
+  const submitButton = document.getElementById("assessmentSubmit");
+  if (!panel || !questionsContainer || !feedback || !submitButton) return;
+
+  if (submitButton.dataset.completed === "true") {
+    panel.style.display = "none";
+    panel.setAttribute("aria-hidden", "true");
+    const summary = document.getElementById("knowledgeCheckSummary");
+    if (summary) summary.textContent = "Safety knowledge check: " + postKnowledgeScore + "/3 correct.";
+    const results = document.getElementById("resultScreen");
+    if (results) results.style.display = "block";
+    return;
+  }
+
+  const answers = knowledgeQuestions.map((question, index) => {
+    const selected = questionsContainer.querySelector('input[name="knowledge-question-' + index + '"]:checked');
+    return selected ? Number(selected.value) : -1;
+  });
+
+  if (answers.some((answer) => answer < 0)) {
+    feedback.textContent = "Please answer all three questions before submitting.";
+    feedback.style.color = "#ffcc66";
+    return;
+  }
+
+  postKnowledgeScore = answers.reduce((score, answer, index) => {
+    return score + (answer === knowledgeQuestions[index].correct ? 1 : 0);
+  }, 0);
+
+  knowledgeQuestions.forEach((question, index) => {
+    const fieldset = questionsContainer.children[index];
+    const explanation = document.createElement("p");
+    explanation.className = "assessment-explanation";
+    explanation.textContent = (answers[index] === question.correct ? "Correct. " : "Review. ") + question.explanation;
+    fieldset.appendChild(explanation);
+    fieldset.querySelectorAll("input").forEach((input) => {
+      input.disabled = true;
+    });
+  });
+
+  feedback.textContent = "You answered " + postKnowledgeScore + " of 3 questions correctly. Review the explanations, then return to your scenario results.";
+  feedback.style.color = "#ffffff";
+  submitButton.textContent = "Back to results";
+  submitButton.dataset.completed = "true";
+}
+
+document.getElementById("takeKnowledgeCheckBtn")?.addEventListener("click", () => {
+  const results = document.getElementById("resultScreen");
+  if (results) results.style.display = "none";
+  openKnowledgeCheck();
+});
+
+document.getElementById("assessmentSubmit")?.addEventListener("click", submitKnowledgeCheck);
+document.getElementById("tryAgainBtn")?.addEventListener("click", () => location.reload());
+
+document.getElementById("downloadReportBtn")?.addEventListener("click", () => {
+  if (!lastScenarioReport) return;
+  const report = lastScenarioReport;
+  exportToCSV(report.totalTime, report.score, report.resultText, report.toppledCount, report.damagedCount);
+});
 
 window.addEventListener("load", () => {
   setTimeout(() => {
