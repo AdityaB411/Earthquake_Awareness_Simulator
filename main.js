@@ -19,6 +19,8 @@ import GUI from "three/examples/jsm/libs/lil-gui.module.min.js";
 let camera, scene, renderer, composer, controls;
 let gui, guiCam;
 let room;
+let playerRig;
+const xrControllers = [];
 let isLocked = false;
 let currentInteractable = null;
 let interactionHintDiv;
@@ -99,7 +101,7 @@ function handleInteraction(object) {
     return;
   }
 
-  if (object.name === "shelterZone") {
+  if (object.name === "shelterZone" || object.name === "desk") {
     takeCover();
   }
 }
@@ -145,6 +147,10 @@ function clampInsideRoom(position) {
 }
 
 function updateFirstPersonMovement(delta) {
+  if (renderer && renderer.xr.isPresenting) {
+    updateXRMovement(delta);
+    return;
+  }
   if (!controls.isLocked) return;
 
   if (coverActive && coverTarget) {
@@ -514,7 +520,7 @@ function updateEarthquake(delta) {
       logDecision("exit_instruction", "Exit guidance shown after shaking stopped");
     }
 
-    if (camera.position.z > 3.0) {
+    if (getPlayerWorldPosition().z > 3.0) {
       endScenario("success");
     }
   }
@@ -724,6 +730,7 @@ function updateCoverState() {
   if (!inZone && coverActive) {
     coverActive = false;
     coverTarget = null;
+    if (renderer && renderer.xr.isPresenting && playerRig) playerRig.position.y = 0;
     showMessage("You left the cover area.", 1000);
   }
 }
@@ -731,14 +738,15 @@ function updateCoverState() {
 function isCameraInShelter() {
   if (!shelterZone) return false;
   const box = new THREE.Box3().setFromObject(shelterZone);
-  if (!box.containsPoint(camera.position)) return false;
+  if (!box.containsPoint(getPlayerWorldPosition())) return false;
   const reason = getNoCoverReason();
   return !reason;
 }
 
 function getNoCoverReason() {
+  const playerPosition = getPlayerWorldPosition();
   for (const zone of noCoverZones) {
-    if (zone.box.containsPoint(camera.position)) {
+    if (zone.box.containsPoint(playerPosition)) {
       return zone.label;
     }
   }
@@ -761,12 +769,17 @@ function takeCover() {
     coverActive = true;
     coverStartTime = Date.now();
     coverUsed = true;
-    coverTarget = new THREE.Vector3(
-      camera.position.x,
-      EYE_HEIGHT_CROUCH,
-      camera.position.z
-    );
-    camera.position.y = EYE_HEIGHT_CROUCH;
+    if (renderer && renderer.xr.isPresenting) {
+      coverTarget = playerRig.position.clone();
+      playerRig.position.y = -0.55;
+    } else {
+      coverTarget = new THREE.Vector3(
+        camera.position.x,
+        EYE_HEIGHT_CROUCH,
+        camera.position.z
+      );
+      camera.position.y = EYE_HEIGHT_CROUCH;
+    }
 
     if (activeQuake && !activeQuake.coverScored) {
       const responseTime = (Date.now() - scenarioStartTime) / 1000 - activeQuake.start;
@@ -1039,6 +1052,9 @@ async function init() {
   camera.position.set(0, 1.6, 2.0);
 
   scene = new THREE.Scene();
+  playerRig = new THREE.Group();
+  scene.add(playerRig);
+  playerRig.add(camera);
 
   await createRoom();
 
@@ -1064,6 +1080,25 @@ async function init() {
   const vrButton = VRButton.createButton(renderer);
   vrButton.id = "webxr-vr-button";
   document.body.appendChild(vrButton);
+
+  renderer.xr.addEventListener("sessionstart", onXRSessionStart);
+  renderer.xr.addEventListener("sessionend", onXRSessionEnd);
+
+  for (let index = 0; index < 2; index += 1) {
+    const controller = renderer.xr.getController(index);
+    controller.addEventListener("select", () => handleXRSelect(controller));
+    const ray = new THREE.Line(
+      new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(0, 0, 0),
+        new THREE.Vector3(0, 0, -3),
+      ]),
+      new THREE.LineBasicMaterial({ color: 0x00d4ff })
+    );
+    ray.name = "xr-controller-ray";
+    controller.add(ray);
+    scene.add(controller);
+    xrControllers.push(controller);
+  }
 
   controls = new PointerLockControls(camera, document.body);
 
@@ -1125,6 +1160,80 @@ async function init() {
     ssaoPass.maxDistance = 0.1;
     composer.addPass(ssaoPass);
   }
+}
+
+function onXRSessionStart() {
+  if (controls && controls.isLocked) controls.unlock();
+  playerRig.position.set(0, 0, 2);
+  playerRig.rotation.set(0, 0, 0);
+  camera.position.set(0, 0, 0);
+  camera.rotation.set(0, 0, 0);
+  moveState.forward = false;
+  moveState.backward = false;
+  moveState.left = false;
+  moveState.right = false;
+  showMessage("Use the thumbstick to move. Point a controller and press its trigger to interact.", 5000);
+}
+
+function onXRSessionEnd() {
+  playerRig.position.set(0, 0, 0);
+  playerRig.rotation.set(0, 0, 0);
+  camera.position.set(0, EYE_HEIGHT, 2);
+  camera.rotation.set(0, 0, 0);
+  coverActive = false;
+  coverTarget = null;
+}
+
+function getPlayerWorldPosition(target = new THREE.Vector3()) {
+  if (camera) camera.getWorldPosition(target);
+  return target;
+}
+
+function updateXRMovement(delta) {
+  if (!renderer || !renderer.xr.isPresenting || !playerRig || coverActive) return;
+  const session = renderer.xr.getSession();
+  if (!session) return;
+
+  let axisX = 0;
+  let axisY = 0;
+  for (const source of session.inputSources) {
+    if (!source.gamepad) continue;
+    const axes = source.gamepad.axes;
+    if (!axes || axes.length < 2) continue;
+    const x = axes.length >= 4 ? axes[2] : axes[0];
+    const y = axes.length >= 4 ? axes[3] : axes[1];
+    if (Math.abs(x) > Math.abs(axisX)) axisX = x;
+    if (Math.abs(y) > Math.abs(axisY)) axisY = y;
+  }
+
+  if (Math.abs(axisX) < 0.15) axisX = 0;
+  if (Math.abs(axisY) < 0.15) axisY = 0;
+  if (axisX === 0 && axisY === 0) return;
+
+  const direction = new THREE.Vector3();
+  camera.getWorldDirection(direction);
+  direction.y = 0;
+  direction.normalize();
+  const strafe = new THREE.Vector3().crossVectors(direction, camera.up).normalize();
+  const velocity = new THREE.Vector3()
+    .addScaledVector(direction, -axisY)
+    .addScaledVector(strafe, axisX);
+
+  if (velocity.lengthSq() === 0) return;
+  velocity.normalize().multiplyScalar(moveSpeed * delta);
+  playerRig.position.add(velocity);
+  clampInsideRoom(playerRig.position);
+}
+
+function handleXRSelect(controller) {
+  if (!room || !renderer || !renderer.xr.isPresenting) return;
+  const raycaster = new THREE.Raycaster();
+  raycaster.setFromXRController(controller);
+  const intersections = raycaster.intersectObjects(room.children, true);
+  const hit = intersections.find((intersection) => intersection.distance < 3.0 &&
+    ["Door", "shelterZone", "desk"].includes(intersection.object.name));
+  if (!hit) return;
+  handleInteraction(hit.object);
 }
 
 function onWindowResize() {
@@ -2178,7 +2287,12 @@ window.addEventListener("load", () => {
 // ----------------- INTERACTION ------------------------
 
 function updateInteraction() {
-  if (!controls.isLocked) {
+  if (!controls.isLocked && !(renderer && renderer.xr.isPresenting)) {
+    if (interactionHintDiv) interactionHintDiv.style.display = "none";
+    return;
+  }
+
+  if (renderer && renderer.xr.isPresenting) {
     if (interactionHintDiv) interactionHintDiv.style.display = "none";
     return;
   }
