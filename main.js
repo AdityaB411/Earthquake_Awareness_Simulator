@@ -526,6 +526,7 @@ function updateEarthquake(delta) {
       awaitingExit = true;
       coverActive = false;
       coverTarget = null;
+      if (renderer && renderer.xr.isPresenting && playerRig) playerRig.position.y = 0;
       showMessage("Shaking has stopped. Check for hazards, then use the exit when safe.", 5000);
       logDecision("exit_instruction", "Exit guidance shown after shaking stopped");
     }
@@ -2206,7 +2207,7 @@ function startScenario() {
     const timerDiv = document.getElementById("timer");
     if (timerDiv) timerDiv.style.display = "block";
 
-    if (controls && !controls.isLocked) {
+    if (!(renderer && renderer.xr.isPresenting) && controls && !controls.isLocked) {
       controls.lock();
     }
 
@@ -2235,7 +2236,14 @@ function validateAndStart() {
     controlsIntro.style.display = "none";
   }
 
-  if (scenarioMode === "guided") {
+  if (renderer && renderer.xr.isPresenting) {
+    showTourMessage("Ready to begin. Use the controls panel to start the scenario.");
+    setTimeout(() => {
+      hideTourMessage();
+      const startButton = document.getElementById("startScenarioBtn");
+      if (startButton) startButton.style.display = "block";
+    }, 1200);
+  } else if (scenarioMode === "guided") {
     runRoomTour();
   } else {
     if (camera) {
