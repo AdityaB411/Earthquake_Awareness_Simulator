@@ -835,7 +835,7 @@ function updateStatus() {
     statusDiv.style.animation = "none";
   } else if (activeQuake) {
     const label = activeQuake.label === "aftershock" ? "AFTERSHOCK" : "MAIN QUAKE";
-    statusDiv.textContent = `${label} DEPREM! M${activeQuake.magnitude.toFixed(
+    statusDiv.textContent = `${label}! M${activeQuake.magnitude.toFixed(
       1
     )} - Cover: ${coverActive ? "YES" : "NO"}`;
     statusDiv.style.color = "#ff8800";
