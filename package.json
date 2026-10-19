@@ -20,9 +20,9 @@
   ],
   "license": "MIT",
   "scripts": {
-    "dev": "vite --host",
+    "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview --host",
+    "preview": "vite preview",
     "check": "node --input-type=module --check < main.js && node scripts/validate-project.mjs"
   },
   "dependencies": {
