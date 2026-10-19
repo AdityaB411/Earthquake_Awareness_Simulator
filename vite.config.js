@@ -1,7 +1,6 @@
 import { defineConfig } from "vite";
 
-// Make the Vite development server accessible on all hosts
-// (for reverse proxies and alternate domains).
+// Keep the development server limited to this machine by default.
 export default defineConfig({
   base: "./",
   server: {
