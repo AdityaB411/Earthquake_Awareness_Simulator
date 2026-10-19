@@ -24,6 +24,20 @@ for (const [id, count] of idCounts) {
   if (count > 1) failures.push(`Duplicate HTML id: ${id}`);
 }
 
+const createRoomStart = source.indexOf("async function createRoom()");
+const createRoomEnd = source.indexOf("function createShelterZoneForObject", createRoomStart);
+if (createRoomStart < 0 || createRoomEnd < 0) {
+  failures.push("Could not locate the room-building function for regression checks.");
+} else {
+  const createRoomSource = source.slice(createRoomStart, createRoomEnd);
+  if (createRoomSource.includes("monitorAssembly")) {
+    failures.push("createRoom must not reference the fallback-only monitorAssembly variable.");
+  }
+}
+if (source.includes("loadedModels.mouse")) {
+  failures.push("main.js references a mouse model key that is not configured in REALISTIC_MODELS.");
+}
+
 const referencedIds = new Set(
   [...source.matchAll(/getElementById\(\s*["']([^"']+)["']\s*\)/g)].map((match) => match[1])
 );
