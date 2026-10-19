@@ -27,6 +27,7 @@ let exitCompleted = false;
 let isLocked = false;
 let currentInteractable = null;
 let interactionHintDiv;
+let messageTimeoutId = null;
 let handsGroup;
 let shelterZone;
 let coverTarget = null;
@@ -395,7 +396,7 @@ function buildQuakeTimeline() {
   quakeTimeline.length = 0;
   totalQuakeDuration = 0;
 
-  const mainStart = 2.0;
+  const mainStart = 6.0;
   const difficultySettings = {
     practice: { magnitudeMin: 5.2, magnitudeMax: 6.2, durationMin: 8, durationMax: 12, aftershockMin: 1, aftershockMax: 2 },
     standard: { magnitudeMin: 5.9, magnitudeMax: 7.2, durationMin: 12, durationMax: 18, aftershockMin: 2, aftershockMax: 3 },
@@ -655,7 +656,7 @@ function applyObjectShake(intensity, time, delta) {
         (Math.random() - 0.5) * 0.6,
         (Math.random() - 0.5) * 0.6
       );
-      logDecision("object_toppled", `${data.label} devrildi`);
+      logDecision("object_toppled", `${data.label} toppled`);
     }
 
     applyDamage(object, data, intensity);
@@ -717,7 +718,7 @@ function applyDamage(object, data, intensity) {
     if (data.damaged > 0.6 && !data.broken) {
       data.broken = true;
       markObjectDamaged(object);
-      logDecision("object_damaged", `${data.label} hasar gordu`);
+      logDecision("object_damaged", `${data.label} was damaged`);
     }
   }
 }
@@ -836,14 +837,16 @@ function logDecision(action, description) {
 
 function showMessage(message, duration = 4000) {
   const messageDiv = document.getElementById("messageBox");
-  if (messageDiv) {
-    messageDiv.textContent = message;
-    messageDiv.style.display = "block";
+  if (!messageDiv) return;
 
-    setTimeout(() => {
-      messageDiv.style.display = "none";
-    }, duration);
-  }
+  if (messageTimeoutId !== null) clearTimeout(messageTimeoutId);
+  messageDiv.textContent = message;
+  messageDiv.style.display = "block";
+
+  messageTimeoutId = setTimeout(() => {
+    messageDiv.style.display = "none";
+    messageTimeoutId = null;
+  }, duration);
 }
 
 function updateStatus() {
@@ -871,9 +874,16 @@ function updateStatus() {
     statusDiv.style.borderColor = "#ff8800";
     statusDiv.style.animation = "pulse 0.5s infinite";
   } else if (quakeTimeline.length > 0) {
-    statusDiv.textContent = "Shaking has paused; waiting for aftershocks...";
-    statusDiv.style.color = "#00d4ff";
-    statusDiv.style.borderColor = "#00d4ff";
+    const elapsed = timerStarted ? (Date.now() - scenarioStartTime) / 1000 : 0;
+    if (quakeTimeline.length > 0 && elapsed < quakeTimeline[0].start) {
+      statusDiv.textContent = "Get ready: locate a sturdy desk and prepare to take cover.";
+      statusDiv.style.color = "#00d4ff";
+      statusDiv.style.borderColor = "#00d4ff";
+    } else {
+      statusDiv.textContent = "Shaking has paused; stay alert for possible aftershocks.";
+      statusDiv.style.color = "#00d4ff";
+      statusDiv.style.borderColor = "#00d4ff";
+    }
     statusDiv.style.animation = "none";
   } else {
     statusDiv.textContent = "The simulated shaking has ended. Check for hazards before exiting.";
