@@ -53,6 +53,7 @@ The container serves the app on port 8080.
 - `public/assets/3D/`: GLB models
 - `public/assets/hdri/`: environment maps
 - `vite.config.js`: development server and asset base settings
+- `.github/workflows/build.yml`: CI dependency-install and production-build check
 - `.github/workflows/pages.yml`: GitHub Pages build/deployment workflow
 
 ## Known limitations to address before course submission
@@ -69,7 +70,7 @@ The container serves the app on port 8080.
 - Teach and assess Drop, Cover, and Hold On with clear in-simulation explanations
 - Compare pre-test and post-test results in a future iteration so learning outcomes can be measured
 - Provide a transparent scoring rubric and scenario debrief
-- Test keyboard controls, model loading, report export, and keyboard accessibility on the target laptop/browser
+- Test keyboard controls, XR thumbstick/controller input, model loading, report export, and keyboard accessibility on the target laptop/browser
 
 ## Upstream project and license
 
