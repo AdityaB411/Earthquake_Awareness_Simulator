@@ -11,7 +11,7 @@ A laptop-friendly, browser-based 3D earthquake-preparedness training prototype a
 - Randomized main-shock and aftershock sequence
 - Visual camera/object shaking and heuristic object-toppling/damage cues
 - Take-cover interaction with response-time and cover-duration scoring
-- End-of-run summary, decision log, and CSV report download
+- End-of-run summary and decision log\n- Optional three-question post-scenario safety knowledge check with explanations\n- User-triggered CSV report download including the knowledge-check score
 - Local browser-only operation; no server-side account or training-data storage is implemented
 
 ## Requirements
@@ -57,17 +57,17 @@ The container serves the app on port 8080.
 
 ## Known limitations to address before course submission
 
-1. **WebXR is not implemented yet.** The current application uses WebGL and desktop pointer-lock controls. The `feature/webxr-foundation` branch enables Three.js WebXR and adds the standard VR entry button. Validate it on a compatible immersive browser/headset before describing immersive mode as tested. Desktop mode remains the fallback.
+1. **WebXR needs end-to-end validation.** The `feature/webxr-foundation` branch enables Three.js WebXR and adds the standard VR entry button. Headset locomotion and controller interaction are not yet complete; validate these on compatible immersive hardware before describing immersive mode as fully functional. Desktop mode remains the supported development baseline.
 2. **Safety behaviour needs review.** The current cover zone is an invisible volume around the desk; the interaction mainly crouches the camera and locks movement rather than simulating a verified Drop, Cover, and Hold On action. The scenario should be checked against official safety guidance before being used as instructional material.
 3. **Physics are approximate.** Event magnitudes/durations and object topple/damage events are generated procedurally. They should not be presented as real earthquake predictions or scientifically accurate structural responses.
-4. **Scoring is heuristic.** The score represents actions inside this prototype, not a validated measure of real-world readiness. The score display reflects a maximum of 180 points under the current scoring rules.
-5. **Asset attribution should be verified.** The code is MIT-licensed, but confirm the licences/attributions for each bundled 3D model and environment asset before redistributing the project publicly.
+4. **Assessment is educational.** The short knowledge check reinforces safety guidance but is not a validated readiness test or certification.\n5. **Scoring is heuristic.** The score represents actions inside this prototype, not a validated measure of real-world readiness. The score display reflects a maximum of 180 points under the current scoring rules.
+6. **Asset attribution should be verified.** The code is MIT-licensed, but confirm the licences/attributions for each bundled 3D model and environment asset before redistributing the project publicly.
 
 ## Suggested course-project improvements
 
 - Implement WebXR with an explicit desktop fallback
 - Teach and assess Drop, Cover, and Hold On with clear in-simulation explanations
-- Add a short pre-test and post-test so learning outcomes can be measured
+- Compare pre-test and post-test results in a future iteration so learning outcomes can be measured
 - Provide a transparent scoring rubric and scenario debrief
 - Test keyboard controls, model loading, report export, and keyboard accessibility on the target laptop/browser
 
