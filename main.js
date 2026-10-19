@@ -30,11 +30,11 @@ const noCoverZones = [];
 const clock = new THREE.Clock();
 let deltaTime;
 
-// Goz hizasi sabit yuksekligi (metre cinsinden)
+// Fixed eye height (in metres).
 const EYE_HEIGHT = 1.6;
 const EYE_HEIGHT_CROUCH = 1.05;
 
-// ==================== FPS HAREKET KONTROLLERI (WASD) ====================
+// ==================== FIRST-PERSON MOVEMENT CONTROLS (WASD) ====================
 const moveState = {
   forward: false,
   backward: false,
@@ -63,7 +63,7 @@ function onKeyDown(event) {
       if (coverActive) {
         coverActive = false;
         coverTarget = null;
-        showMessage("Korunmadan ciktiniz", 1000);
+        showMessage("You left the cover area.", 1000);
         return;
       }
       if (isCameraInShelter()) {
@@ -110,14 +110,14 @@ function toggleDoor() {
 
   if (window.isDoorOpen) {
     window.doorGroup.rotation.y = -Math.PI / 2;
-    showMessage("Kapi acildi", 1000);
+    showMessage("Door opened.", 1000);
   } else {
     window.doorGroup.rotation.y = 0;
-    showMessage("Kapi kapandi", 1000);
+    showMessage("Door closed.", 1000);
   }
 }
 
-// Oda ici sinir icin yardimci fonksiyon (Kapi ve disariya cikis)
+// Keep movement within the room and exit area.
 function clampInsideRoom(position) {
   const roomHalfSize = 2.4;
   const wallZ = 2.5;
@@ -187,7 +187,7 @@ function updateFirstPersonMovement(delta) {
   camera.position.y = coverActive ? EYE_HEIGHT_CROUCH : EYE_HEIGHT;
 }
 
-// ==================== SES SISTEMI ====================
+// ==================== AUDIO SYSTEM ====================
 let rumbleContext = null;
 let rumbleOsc = null;
 let rumbleGain = null;
@@ -231,7 +231,7 @@ function stopRumble() {
   rumbleGain.gain.setTargetAtTime(0.0, rumbleContext.currentTime, 0.08);
 }
 
-// ==================== PERFORMANS AYARLARI ====================
+// ==================== PERFORMANCE SETTINGS ====================
 const statsEnable = false;
 const guiEnable = false;
 const toneMapping = THREE.ACESFilmicToneMapping;
@@ -244,7 +244,7 @@ const assetBase = import.meta.env.BASE_URL ?? "./";
 const loader = new GLTFLoader().setPath(`${assetBase}assets/3D/`);
 const hdriLoader = new RGBELoader().setPath(`${assetBase}assets/hdri/`);
 
-// ==================== MODEL YUKLEME ====================
+// ==================== MODEL LOADING ====================
 const REALISTIC_MODELS = {
   desk: {
     file: "office_desk.glb",
@@ -357,7 +357,7 @@ async function loadAllRealisticModels() {
   return loadedModels;
 }
 
-// ==================== DEPREM SISTEMI ====================
+// ==================== EARTHQUAKE SYSTEM ====================
 const quakeTimeline = [];
 let activeQuake = null;
 let scenarioStartTime = 0;
@@ -392,7 +392,7 @@ function buildQuakeTimeline() {
     start: mainStart,
     magnitude: mainMagnitude,
     duration: mainDuration,
-    label: "ana",
+    label: "main",
   });
 
   totalQuakeDuration += mainDuration;
@@ -408,7 +408,7 @@ function buildQuakeTimeline() {
       start: nextStart,
       magnitude,
       duration,
-      label: "artci",
+      label: "aftershock",
     });
 
     totalQuakeDuration += duration;
@@ -435,10 +435,10 @@ function startQuake(event) {
   };
 
   logDecision(
-    event.label === "artci" ? "aftershock_started" : "quake_started",
-    `${event.label === "artci" ? "Artci" : "Ana"} deprem basladi (M${event.magnitude.toFixed(
+    event.label === "aftershock" ? "aftershock_started" : "quake_started",
+    `${event.label === "aftershock" ? "Aftershock" : "Main earthquake"} started (M${event.magnitude.toFixed(
       1
-    )}, ${event.duration.toFixed(0)}s)`
+    )}, ${event.duration.toFixed(0)} s)`
   );
 
   if (coverActive) {
@@ -509,8 +509,8 @@ function updateEarthquake(delta) {
       awaitingExit = true;
       coverActive = false;
       coverTarget = null;
-      showMessage("Sarsinti bitti. Cikis kapisindan odayi terk edin.", 5000);
-      logDecision("exit_instruction", "Sarsinti sonrasi cikis talimati verildi");
+      showMessage("Shaking has stopped. Check for hazards, then use the exit when safe.", 5000);
+      logDecision("exit_instruction", "Exit guidance shown after shaking stopped");
     }
 
     if (camera.position.z > 3.0) {
@@ -567,7 +567,7 @@ function registerPhysicsObject(object, options = {}) {
     mass: options.mass ?? 5,
     stability: options.stability ?? 0.6,
     allowTopple: options.allowTopple ?? true,
-    label: options.label ?? object.name ?? "Nesne",
+    label: options.label ?? object.name ?? "Object",
     basePosition,
     baseRotation,
     baseMinOffset,
@@ -723,7 +723,7 @@ function updateCoverState() {
   if (!inZone && coverActive) {
     coverActive = false;
     coverTarget = null;
-    showMessage("Korunmadan ciktiniz", 1000);
+    showMessage("You left the cover area.", 1000);
   }
 }
 
@@ -747,12 +747,12 @@ function getNoCoverReason() {
 function takeCover() {
   const noCoverReason = getNoCoverReason();
   if (noCoverReason) {
-    showMessage(`${noCoverReason} cevresinde korunma yapilamaz.`, 2000);
+    showMessage(`${noCoverReason} is not a safe cover location.`, 2000);
     return;
   }
 
   if (!shelterZone || !isCameraInShelter()) {
-    showMessage("Korunma alani icinde degilsiniz", 1500);
+    showMessage("Move into the designated cover area first.", 1500);
     return;
   }
 
@@ -772,8 +772,8 @@ function takeCover() {
       awardCoverPoints(Math.max(0, responseTime));
     }
 
-    logDecision("took_cover", "Korunma alani kullanildi");
-    showMessage("Korunma pozisyonu alindi", 1500);
+    logDecision("took_cover", "Took cover in the designated area");
+    showMessage("Cover position taken.", 1500);
   }
 }
 
@@ -791,7 +791,7 @@ function awardCoverPoints(responseTime) {
   }
 }
 
-// ==================== ZAMANLAMA VE PUANLAMA ====================
+// ==================== TIMING AND SCORING ====================
 let timerStarted = false;
 let startTime = 0;
 let userScore = 0;
@@ -822,32 +822,32 @@ function updateStatus() {
   if (!statusDiv) return;
 
   if (!timerStarted) {
-    statusDiv.textContent = "Deprem Durumu: Beklemede";
+    statusDiv.textContent = "Earthquake status: Waiting";
     statusDiv.style.color = "#ffff00";
     statusDiv.style.animation = "none";
     return;
   }
 
   if (awaitingExit) {
-    statusDiv.textContent = "Sarsinti bitti. Cikis kapisindan odayi terk edin.";
+    statusDiv.textContent = "Shaking has stopped. Check for hazards, then use the exit when safe.";
     statusDiv.style.color = "#00ff99";
     statusDiv.style.borderColor = "#00ff99";
     statusDiv.style.animation = "none";
   } else if (activeQuake) {
-    const label = activeQuake.label === "artci" ? "ARTCI" : "ANA";
+    const label = activeQuake.label === "aftershock" ? "AFTERSHOCK" : "MAIN QUAKE";
     statusDiv.textContent = `${label} DEPREM! M${activeQuake.magnitude.toFixed(
       1
-    )} - Korunma: ${coverActive ? "EVET" : "HAYIR"}`;
+    )} - Cover: ${coverActive ? "YES" : "NO"}`;
     statusDiv.style.color = "#ff8800";
     statusDiv.style.borderColor = "#ff8800";
     statusDiv.style.animation = "pulse 0.5s infinite";
   } else if (quakeTimeline.length > 0) {
-    statusDiv.textContent = "Sarsinti bitti, artcilar bekleniyor...";
+    statusDiv.textContent = "Shaking has paused; waiting for aftershocks...";
     statusDiv.style.color = "#00d4ff";
     statusDiv.style.borderColor = "#00d4ff";
     statusDiv.style.animation = "none";
   } else {
-    statusDiv.textContent = "Deprem sona erdi. Guvendesiniz.";
+    statusDiv.textContent = "The simulated shaking has ended. Check for hazards before exiting.";
     statusDiv.style.color = "#00ff00";
     statusDiv.style.borderColor = "#00ff00";
     statusDiv.style.animation = "none";
@@ -895,32 +895,32 @@ function endScenario(result) {
   let color = "";
 
   if (result === "success" && coverUsed) {
-    title = "Tebrikler, depremi guvenle tamamladiniz";
+    title = "Well done — you completed the earthquake scenario";
     text =
-      "Dogru korunma kararlarini aldiniz. Artci sarsintilarin bitmesini beklediniz.";
+      "You took cover in the designated area and waited until the simulated aftershocks ended.";
     color = "#00ff00";
   } else if (result === "success" && !coverUsed) {
-    title = "Deprem sona erdi ancak korunma alinmadi";
+    title = "Scenario complete, but no cover was taken";
     text =
-      "Senaryo tamamlandi fakat korunma pozisyonu alinmadigi icin guvenli tamamlanmadi.";
+      "The scenario ended without you taking cover, so it was not scored as a safe completion.";
     color = "#ffaa00";
   } else {
-    title = "Senaryo Tamamlandi";
-    text = "Deprem sona erdi.";
+    title = "Scenario Complete";
+    text = "The simulated shaking has ended.";
     color = "#00ff00";
   }
 
   resultTitle.textContent = title;
   resultTitle.style.color = color;
   resultText.textContent = text;
-  scoreText.textContent = `Toplam Puan: ${userScore} / 200`;
-  timeText.textContent = `Toplam Sure: ${totalTime} saniye`;
+  scoreText.textContent = `Total score: ${userScore} / 180`;
+  timeText.textContent = `Total time: ${totalTime} seconds`;
 
-  let logHTML = "<h4>Karar Gecmisi:</h4><ul>";
+  let logHTML = "<h4>Decision Log:</h4><ul>";
   decisionLog.forEach((log) => {
     logHTML += `<li>[${(log.time / 1000).toFixed(1)}s] ${log.description}</li>`;
   });
-  logHTML += `</ul><p>Devrilen nesne: ${toppledCount} | Hasarli nesne: ${damagedCount}</p>`;
+  logHTML += `</ul><p>Objects toppled: ${toppledCount} | Objects damaged: ${damagedCount}</p>`;
   logText.innerHTML = logHTML;
 
   if (controls) controls.unlock();
@@ -930,16 +930,16 @@ function endScenario(result) {
       const finalResultText = `${title} - ${text}`;
       exportToCSV(totalTime, userScore, finalResultText, toppledCount, damagedCount);
     } catch (e) {
-      console.error("Rapor olusturma hatasi:", e);
+      console.error("Failed to generate the training report:", e);
     }
   }, 500);
 }
 
 function exportToCSV(totalTime, score, resultText, toppledCount, damagedCount) {
   const user = window.userData || {
-    name: "Bilinmeyen",
-    surname: "Kullanici",
-    startTime: new Date().toLocaleString(),
+    name: "Unknown",
+    surname: "User",
+    startTime: new Date().toLocaleString("en-GB"),
   };
 
   function formatElapsedTime(seconds) {
@@ -956,19 +956,19 @@ function exportToCSV(totalTime, score, resultText, toppledCount, damagedCount) {
   }
 
   let csvContent = "\uFEFF";
-  csvContent += "Deprem Egitimi Simulasyon Raporu\n";
+  csvContent += "EARTHQUAKE TRAINING SIMULATION REPORT\n";
   csvContent += "--------------------------------\n";
-  csvContent += `Ad Soyad;${user.name} ${user.surname}\n`;
-  csvContent += `Tarih;${user.startTime}\n`;
-  csvContent += `Toplam Sure;${totalTime} saniye\n`;
-  csvContent += `Puan;${score}\n`;
-  csvContent += `Devrilen Nesne;${toppledCount}\n`;
-  csvContent += `Hasarli Nesne;${damagedCount}\n`;
-  csvContent += `Sonuc;${resultText.replace(/\n/g, " ")}\n\n`;
+  csvContent += `Name;${user.name} ${user.surname}\n`;
+  csvContent += `Date;${user.startTime}\n`;
+  csvContent += `Total time;${totalTime} seconds\n`;
+  csvContent += `Score;${score}\n`;
+  csvContent += `Objects toppled;${toppledCount}\n`;
+  csvContent += `Objects damaged;${damagedCount}\n`;
+  csvContent += `Result;${resultText.replace(/\n/g, " ")}\n\n`;
 
   csvContent += "--------------------------------\n";
-  csvContent += "DETAYLI HAREKET DOKUMU\n";
-  csvContent += "Zaman (mm:ss.s);Eylem;Aciklama\n";
+  csvContent += "DETAILED DECISION LOG\n";
+  csvContent += "Time (mm:ss.s);Action;Description\n";
 
   decisionLog.forEach((log) => {
     const timeSeconds = typeof log.time === "number" ? log.time / 1000 : Number(log.time);
@@ -984,7 +984,7 @@ function exportToCSV(totalTime, score, resultText, toppledCount, damagedCount) {
 
   const dateStr = new Date().toISOString().slice(0, 10);
   link.setAttribute("href", url);
-  link.setAttribute("download", `Egitim_Raporu_${user.name}_${user.surname}_${dateStr}.csv`);
+  link.setAttribute("download", `Earthquake_Training_Report_${user.name}_${user.surname}_${dateStr}.csv`);
   link.style.visibility = "hidden";
   document.body.appendChild(link);
   link.click();
@@ -1005,9 +1005,9 @@ function addGUI() {
 
   gui = new GUI();
   guiCam = gui.addFolder("QuakeSim");
-  guiCam.add(guiObject, "value3", 0, 10).name("Sahne Parlakligi");
-  guiCam.addColor(guiObject, "color", 255).name("Zemin Rengi");
-  guiCam.add(guiObject, "pauseBoolean").name("Duraklat");
+  guiCam.add(guiObject, "value3", 0, 10).name("Scene Brightness");
+  guiCam.addColor(guiObject, "color", 255).name("Floor Color");
+  guiCam.add(guiObject, "pauseBoolean").name("Pause");
 }
 
 addGUI();
@@ -1067,7 +1067,7 @@ async function init() {
 
   window.addEventListener("resize", onWindowResize);
 
-  // Aydinlatma
+  // Lighting
   const ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
   scene.add(ambientLight);
 
@@ -1129,7 +1129,7 @@ function render() {
   else renderer.render(scene, camera);
 }
 
-// ----------------- ODA ------------------------
+// ----------------- ROOM ------------------------
 
 async function createRoom() {
   room = new THREE.Group();
@@ -1318,7 +1318,7 @@ async function createRoom() {
     mass: 40,
     stability: 0.95,
     allowTopple: false,
-    label: "Masa",
+    label: "Desk",
   });
 
   createShelterZoneForObject(desk);
@@ -1362,7 +1362,7 @@ async function createRoom() {
     mass: 1.8,
     stability: 0.4,
     allowTopple: true,
-    label: "Klavye",
+    label: "Keyboard",
   });
   registerPhysicsObject(computerMouse, {
     mass: 1.1,
@@ -1377,7 +1377,7 @@ async function createRoom() {
       mass: 12,
       stability: 0.6,
       allowTopple: true,
-      label: "Ofis sandalyeleri",
+      label: "Office chair",
     });
   } else {
     const fallbackChair = createFallbackChair();
@@ -1385,7 +1385,7 @@ async function createRoom() {
       mass: 10,
       stability: 0.55,
       allowTopple: true,
-      label: "Sandalye",
+      label: "Chair",
     });
   }
 
@@ -1395,7 +1395,7 @@ async function createRoom() {
       mass: 8,
       stability: 0.5,
       allowTopple: true,
-      label: "Misafir sandalyesi",
+      label: "Guest chair",
     });
   }
 
@@ -1405,7 +1405,7 @@ async function createRoom() {
       mass: 8,
       stability: 0.5,
       allowTopple: true,
-      label: "Misafir sandalyesi",
+      label: "Guest chair",
     });
   }
 
@@ -1415,7 +1415,7 @@ async function createRoom() {
       mass: 3.5,
       stability: 0.25,
       allowTopple: true,
-      label: "Bitki",
+      label: "Plant",
     });
   }
 
@@ -1428,7 +1428,7 @@ async function createRoom() {
       mass: 12,
       stability: 0.6,
       allowTopple: true,
-      label: "Isitici",
+      label: "Heater",
     });
   } else {
     const fallbackHeater = createFallbackHeater();
@@ -1437,7 +1437,7 @@ async function createRoom() {
       mass: 10,
       stability: 0.55,
       allowTopple: true,
-      label: "Isitici",
+      label: "Heater",
     });
   }
 
@@ -1449,8 +1449,8 @@ async function createRoom() {
     electricalPanel = createElectricalPanel();
   }
 
-  registerNoCoverZone(heater, { x: 0.7, y: 1.2, z: 0.7 }, "Isitici");
-  registerNoCoverZone(electricalPanel, { x: 0.6, y: 1.0, z: 0.6 }, "Elektrik panosu");
+  registerNoCoverZone(heater, { x: 0.7, y: 1.2, z: 0.7 }, "Heater");
+  registerNoCoverZone(electricalPanel, { x: 0.6, y: 1.0, z: 0.6 }, "Electrical panel");
 
   scene.add(room);
 }
@@ -1493,7 +1493,7 @@ function registerNoCoverZone(object, padding, label) {
   noCoverZones.push({ box, label });
 }
 
-// ==================== FALLBACK MODELLERI ====================
+// ==================== FALLBACK MODELS ====================
 
 function createFallbackDesk() {
   const deskGeometry = new THREE.BoxGeometry(1.5, 0.05, 0.8);
@@ -1805,7 +1805,7 @@ function animate() {
     const elapsedTime = ((Date.now() - startTime) / 1000).toFixed(1);
     const timerDiv = document.getElementById("timer");
     if (timerDiv) {
-      timerDiv.textContent = `Gecen Sure: ${elapsedTime}s`;
+      timerDiv.textContent = `Elapsed time: ${elapsedTime} s`;
     }
   }
 
@@ -1813,7 +1813,7 @@ function animate() {
   renderer.toneMappingExposure = guiObject.value3;
 }
 
-// ----------------- TUR ------------------------
+// ----------------- ROOM TOUR ------------------------
 let tourOverlay;
 
 function showTourMessage(text) {
@@ -1898,19 +1898,19 @@ async function runRoomTour() {
     {
       pos: centerPos,
       look: new THREE.Vector3(0, 0.8, -1.5),
-      text: "Masaya yakin durun, depremde korunma alani burada.",
+      text: "Move near the desk; this is the designated cover area in this simulation.",
       wait: 2000,
     },
     {
       pos: centerPos,
       look: new THREE.Vector3(2.4, 1.2, -1.8),
-      text: "Agir nesneler daha az etkilenir, hafifler devrilebilir.",
+      text: "Objects may move or topple during shaking; avoid unstable furniture.",
       wait: 2500,
     },
     {
       pos: new THREE.Vector3(0, 1.6, 0),
       look: new THREE.Vector3(0, 1.5, 3.0),
-      text: "Deprem bitince kapiyi acip guvende kalin.",
+      text: "After shaking stops, check for hazards and use the exit when it is safe.",
       wait: 2000,
     },
   ];
@@ -1922,7 +1922,7 @@ async function runRoomTour() {
   }
 
   hideTourMessage();
-  showTourMessage("Simulasyon basliyor. Hazir olun...", 2000);
+  showTourMessage("Simulation starting. Get ready...", 2000);
 
   await tweenCameraLookAt(initialPos, new THREE.Vector3(0, 1.6, -2.0), 1500);
 
@@ -1951,7 +1951,7 @@ function startScenario() {
 
   const statusDiv = document.getElementById("quakeStatus");
   if (statusDiv) {
-    statusDiv.textContent = "Ofise giriyorsunuz...";
+    statusDiv.textContent = "Entering the office...";
     statusDiv.style.color = "#ffffff";
     statusDiv.style.borderColor = "#ffffff";
   }
@@ -1965,7 +1965,7 @@ function startScenario() {
 
   setTimeout(() => {
     if (statusDiv) {
-      statusDiv.textContent = "Deprem basladi! Korunma alani bulun.";
+      statusDiv.textContent = "Earthquake started! Find the designated cover area.";
       statusDiv.style.color = "#ff8800";
       statusDiv.style.borderColor = "#ff8800";
       statusDiv.style.animation = "pulse 0.5s infinite";
@@ -1987,13 +1987,13 @@ function validateAndStart() {
   const nameInput = document.getElementById("userName");
   const surnameInput = document.getElementById("userSurname");
 
-  const name = nameInput && nameInput.value.trim() ? nameInput.value.trim() : "Bilinmeyen";
-  const surname = surnameInput && surnameInput.value.trim() ? surnameInput.value.trim() : "Kullanici";
+  const name = nameInput && nameInput.value.trim() ? nameInput.value.trim() : "Unknown";
+  const surname = surnameInput && surnameInput.value.trim() ? surnameInput.value.trim() : "User";
 
   window.userData = {
     name,
     surname,
-    startTime: new Date().toLocaleString(),
+    startTime: new Date().toLocaleString("en-GB"),
   };
 
   const controlsIntro = document.getElementById("controls-intro");
@@ -2022,7 +2022,7 @@ window.addEventListener("load", () => {
   }, 1000);
 });
 
-// ----------------- ETKILESIM ------------------------
+// ----------------- INTERACTION ------------------------
 
 function updateInteraction() {
   if (!controls.isLocked) {
@@ -2044,11 +2044,11 @@ function updateInteraction() {
       if (intersects[0].distance < 3.0) {
         if (object.name === "Door") {
           foundInteractable = object;
-          const actionText = window.isDoorOpen ? "KAPATMAK" : "ACMAK";
-          hintText = `KAPIYI ${actionText} ICIN [E]`;
+          const actionText = window.isDoorOpen ? "close" : "open";
+          hintText = `Press [E] to ${actionText} the door`;
         } else if (object.name === "shelterZone" || object.name === "desk") {
           foundInteractable = object;
-          hintText = "KORUNMA ALMAK ICIN [E]";
+          hintText = "Press [E] to take cover";
         }
       }
     }
@@ -2056,14 +2056,14 @@ function updateInteraction() {
 
   if (!foundInteractable && shelterZone && isCameraInShelter()) {
     foundInteractable = shelterZone;
-    hintText = coverActive ? "KORUNMA AKTIF" : "KORUNMA ALMAK ICIN [E]";
+    hintText = coverActive ? "COVER ACTIVE" : "Press [E] to take cover";
   }
 
   if (!foundInteractable) {
     const noCoverReason = getNoCoverReason();
     if (noCoverReason) {
       foundInteractable = shelterZone;
-      hintText = `${noCoverReason} CEVRESINDE KORUNMA YOK`;
+      hintText = `No cover available near ${noCoverReason}`;
     }
   }
 
