@@ -212,6 +212,15 @@ let rumbleContext = null;
 let rumbleOsc = null;
 let rumbleGain = null;
 let rumbleFilter = null;
+let rumbleSubOsc = null;
+let rumbleSubGain = null;
+let ambientLightRef = null;
+let hemiLightRef = null;
+let ceilingLights = [];
+let dustPoints = null;
+let dustPositions = null;
+let dustSeeds = null;
+let dustBursts = [];
 
 function initRumbleAudio() {
   if (rumbleContext) return;
@@ -235,6 +244,15 @@ function initRumbleAudio() {
   rumbleGain.connect(rumbleContext.destination);
 
   rumbleOsc.start();
+
+  rumbleSubOsc = rumbleContext.createOscillator();
+  rumbleSubGain = rumbleContext.createGain();
+  rumbleSubOsc.type = "sine";
+  rumbleSubOsc.frequency.value = 47;
+  rumbleSubGain.gain.value = 0;
+  rumbleSubOsc.connect(rumbleSubGain);
+  rumbleSubGain.connect(rumbleContext.destination);
+  rumbleSubOsc.start();
 }
 
 function updateRumble(intensity) {
@@ -242,13 +260,139 @@ function updateRumble(intensity) {
   if (rumbleContext.state === "suspended") {
     rumbleContext.resume();
   }
-  const targetGain = Math.min(0.12, 0.02 + intensity * 0.1);
-  rumbleGain.gain.setTargetAtTime(targetGain, rumbleContext.currentTime, 0.05);
+  const targetGain = Math.min(0.12, 0.015 + intensity * 0.095);
+  rumbleGain.gain.setTargetAtTime(targetGain, rumbleContext.currentTime, 0.08);
+  if (rumbleSubGain) {
+    rumbleSubGain.gain.setTargetAtTime(Math.min(0.045, intensity * 0.035), rumbleContext.currentTime, 0.1);
+    rumbleSubOsc.frequency.setTargetAtTime(38 + intensity * 16, rumbleContext.currentTime, 0.12);
+  }
 }
 
 function stopRumble() {
   if (!rumbleGain || !rumbleContext) return;
-  rumbleGain.gain.setTargetAtTime(0.0, rumbleContext.currentTime, 0.08);
+  rumbleGain.gain.setTargetAtTime(0.0, rumbleContext.currentTime, 0.12);
+  if (rumbleSubGain) rumbleSubGain.gain.setTargetAtTime(0.0, rumbleContext.currentTime, 0.15);
+}
+
+function playImpactSound(intensity = 0.7) {
+  if (!rumbleContext || rumbleContext.state === "closed") return;
+  if (rumbleContext.state === "suspended") rumbleContext.resume();
+  const oscillator = rumbleContext.createOscillator();
+  const gain = rumbleContext.createGain();
+  const now = rumbleContext.currentTime;
+  oscillator.type = "triangle";
+  oscillator.frequency.setValueAtTime(95 + Math.random() * 45, now);
+  oscillator.frequency.exponentialRampToValueAtTime(38, now + 0.22);
+  gain.gain.setValueAtTime(Math.min(0.16, 0.035 + intensity * 0.08), now);
+  gain.gain.exponentialRampToValueAtTime(0.001, now + 0.24);
+  oscillator.connect(gain);
+  gain.connect(rumbleContext.destination);
+  oscillator.start(now);
+  oscillator.stop(now + 0.25);
+}
+
+function createDustSystem() {
+  if (!scene || dustPoints) return;
+  const count = 260;
+  dustPositions = new Float32Array(count * 3);
+  dustSeeds = new Float32Array(count);
+  for (let i = 0; i < count; i += 1) {
+    dustPositions[i * 3] = randomRange(-2.25, 2.25);
+    dustPositions[i * 3 + 1] = randomRange(0.15, 2.85);
+    dustPositions[i * 3 + 2] = randomRange(-2.25, 2.25);
+    dustSeeds[i] = Math.random() * Math.PI * 2;
+  }
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute("position", new THREE.BufferAttribute(dustPositions, 3));
+  const material = new THREE.PointsMaterial({
+    color: 0xc8c2b5,
+    size: 0.025,
+    transparent: true,
+    opacity: 0,
+    depthWrite: false,
+    sizeAttenuation: true,
+  });
+  dustPoints = new THREE.Points(geometry, material);
+  dustPoints.frustumCulled = false;
+  scene.add(dustPoints);
+}
+
+function createDustBurst(position, intensity = 0.7) {
+  if (!scene || dustBursts.length >= 8) return;
+  const count = 24;
+  const positions = new Float32Array(count * 3);
+  const velocities = [];
+  for (let i = 0; i < count; i += 1) {
+    positions[i * 3] = position.x + randomRange(-0.12, 0.12);
+    positions[i * 3 + 1] = Math.max(0.05, position.y) + randomRange(0, 0.18);
+    positions[i * 3 + 2] = position.z + randomRange(-0.12, 0.12);
+    velocities.push(new THREE.Vector3(randomRange(-0.65, 0.65), randomRange(0.25, 1.1) * intensity, randomRange(-0.65, 0.65)));
+  }
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+  const material = new THREE.PointsMaterial({
+    color: 0xbdb7aa,
+    size: 0.045,
+    transparent: true,
+    opacity: 0.58,
+    depthWrite: false,
+    sizeAttenuation: true,
+  });
+  const points = new THREE.Points(geometry, material);
+  points.frustumCulled = false;
+  scene.add(points);
+  dustBursts.push({ points, velocities, age: 0, lifetime: 1.1 + intensity * 0.45 });
+}
+
+function updateAtmosphere(intensity, delta, time) {
+  const shake = THREE.MathUtils.clamp(intensity, 0, 1.2);
+  if (ambientLightRef) ambientLightRef.intensity = 1.2 - shake * 0.18;
+  if (hemiLightRef) hemiLightRef.intensity = 0.5 - shake * 0.08;
+  ceilingLights.forEach((light, index) => {
+    const flickerAmount = shake > 0.12 ? shake * (0.2 + Math.random() * 0.55) : 0;
+    light.intensity = Math.max(0.35, 2.0 * (1 - flickerAmount));
+    light.color.setHSL(0.14, 0.24, shake > 0.55 && Math.sin(time * 29 + index * 2) > 0.84 ? 0.28 : 0.95);
+  });
+
+  if (dustPoints) {
+    dustPoints.material.opacity = shake > 0.08 ? Math.min(0.34, 0.06 + shake * 0.22) : 0;
+    dustPoints.visible = dustPoints.material.opacity > 0.01;
+    if (dustPoints.visible && dustPositions) {
+      for (let i = 0; i < dustSeeds.length; i += 1) {
+        const offset = i * 3;
+        dustPositions[offset] += Math.sin(time * 1.7 + dustSeeds[i]) * delta * (0.08 + shake * 0.25);
+        dustPositions[offset + 1] += delta * (0.025 + shake * 0.11);
+        dustPositions[offset + 2] += Math.cos(time * 1.4 + dustSeeds[i]) * delta * (0.08 + shake * 0.25);
+        if (dustPositions[offset + 1] > 2.95) {
+          dustPositions[offset + 1] = 0.12;
+          dustPositions[offset] = randomRange(-2.25, 2.25);
+          dustPositions[offset + 2] = randomRange(-2.25, 2.25);
+        }
+      }
+      dustPoints.geometry.attributes.position.needsUpdate = true;
+    }
+  }
+
+  for (let i = dustBursts.length - 1; i >= 0; i -= 1) {
+    const burst = dustBursts[i];
+    burst.age += delta;
+    const positions = burst.points.geometry.attributes.position;
+    for (let j = 0; j < burst.velocities.length; j += 1) {
+      const velocity = burst.velocities[j];
+      velocity.y -= 1.2 * delta;
+      positions.array[j * 3] += velocity.x * delta;
+      positions.array[j * 3 + 1] += velocity.y * delta;
+      positions.array[j * 3 + 2] += velocity.z * delta;
+    }
+    positions.needsUpdate = true;
+    burst.points.material.opacity = Math.max(0, 0.58 * (1 - burst.age / burst.lifetime));
+    if (burst.age >= burst.lifetime) {
+      scene.remove(burst.points);
+      burst.points.geometry.dispose();
+      burst.points.material.dispose();
+      dustBursts.splice(i, 1);
+    }
+  }
 }
 
 // ==================== PERFORMANCE SETTINGS ====================
@@ -521,6 +665,7 @@ function updateEarthquake(delta) {
 
     applyCameraShake(effectiveIntensity, scenarioElapsed);
     applyObjectShake(intensity, scenarioElapsed, delta);
+    updateAtmosphere(intensity, delta, scenarioElapsed);
     updateRumble(intensity);
 
     if (coverActive) {
@@ -528,6 +673,7 @@ function updateEarthquake(delta) {
     }
   } else {
     relaxObjects(delta);
+    updateAtmosphere(0, delta, scenarioElapsed);
   }
 
   updateCoverState();
@@ -658,15 +804,17 @@ function applyObjectShake(intensity, time, delta) {
     if (data.allowTopple && toppleRisk > 0.48 && Math.random() < toppleChance) {
       data.toppled = true;
       data.velocity.set(
-        (Math.random() - 0.5) * 0.6,
+        (Math.random() - 0.5) * (0.8 + intensity * 1.1),
         0,
-        (Math.random() - 0.5) * 0.6
+        (Math.random() - 0.5) * (0.8 + intensity * 1.1)
       );
       data.rotationVelocity.set(
-        (Math.random() + 0.2) * 1.2,
-        (Math.random() - 0.5) * 0.6,
-        (Math.random() - 0.5) * 0.6
+        (Math.random() + 0.2) * (1.4 + intensity * 1.6),
+        (Math.random() - 0.5) * (0.8 + intensity),
+        (Math.random() - 0.5) * (0.8 + intensity)
       );
+      createDustBurst(object.position, intensity);
+      playImpactSound(intensity);
       logDecision("object_toppled", `${data.label} toppled`);
     }
 
@@ -1175,17 +1323,21 @@ async function init() {
 
   // Lighting
   const ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
+  ambientLightRef = ambientLight;
   scene.add(ambientLight);
 
   const hemiLight = new THREE.HemisphereLight(0xe8f4fc, 0x8b7355, 0.5);
+  hemiLightRef = hemiLight;
   scene.add(hemiLight);
 
   const ceilingLight1 = new THREE.PointLight(0xffffee, 2.0, 10);
+  ceilingLights = [ceilingLight1];
   ceilingLight1.position.set(-1, 2.8, -1);
   ceilingLight1.castShadow = true;
   scene.add(ceilingLight1);
 
   const ceilingLight2 = new THREE.PointLight(0xffffee, 2.0, 10);
+  ceilingLights.push(ceilingLight2);
   ceilingLight2.position.set(1, 2.8, 1);
   ceilingLight2.castShadow = true;
   scene.add(ceilingLight2);
@@ -1193,6 +1345,7 @@ async function init() {
   const fillDir = new THREE.DirectionalLight(0xffffff, 0.8);
   fillDir.position.set(2, 4, 2);
   scene.add(fillDir);
+  createDustSystem();
 
   renderer.shadowMap.enabled = SHADOWS_ENABLED;
   if (SHADOWS_ENABLED) renderer.shadowMap.type = THREE.PCFSoftShadowMap;
