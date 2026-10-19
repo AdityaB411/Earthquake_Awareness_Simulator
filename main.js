@@ -21,6 +21,12 @@ let gui, guiCam;
 let room;
 let playerRig;
 const xrControllers = [];
+let xrWelcomePanel = null;
+let xrHudPanel = null;
+let xrWelcomeCanvas = null;
+let xrHudCanvas = null;
+let xrHudTexture = null;
+let lastXRHudText = "";
 let scenarioMode = "guided";
 let scenarioDifficulty = "standard";
 let exitCompleted = false;
@@ -1121,6 +1127,7 @@ async function init() {
 
   renderer.xr.addEventListener("sessionstart", onXRSessionStart);
   renderer.xr.addEventListener("sessionend", onXRSessionEnd);
+  createXRInterface();
 
   for (let index = 0; index < 2; index += 1) {
     const controller = renderer.xr.getController(index);
@@ -1200,6 +1207,150 @@ async function init() {
   }
 }
 
+function createXRLabelTexture(label, backgroundColor = "#087f8c") {
+  const canvas = document.createElement("canvas");
+  canvas.width = 512;
+  canvas.height = 96;
+  const context = canvas.getContext("2d");
+  context.fillStyle = backgroundColor;
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  context.strokeStyle = "#8de0ff";
+  context.lineWidth = 6;
+  context.strokeRect(3, 3, canvas.width - 6, canvas.height - 6);
+  context.fillStyle = "#ffffff";
+  context.font = "bold 34px Arial";
+  context.textAlign = "center";
+  context.textBaseline = "middle";
+  context.fillText(label, canvas.width / 2, canvas.height / 2);
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  return texture;
+}
+
+function createXRPanelButton(name, label, y, backgroundColor) {
+  const button = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.95, 0.12),
+    new THREE.MeshBasicMaterial({ map: createXRLabelTexture(label, backgroundColor), transparent: false, depthTest: false })
+  );
+  button.name = name;
+  button.position.set(0, y, 0.02);
+  button.renderOrder = 20;
+  return button;
+}
+
+function updateXRWelcomePanel() {
+  if (!xrWelcomePanel) return;
+  const modeButton = xrWelcomePanel.getObjectByName("xrModeButton");
+  const difficultyButton = xrWelcomePanel.getObjectByName("xrDifficultyButton");
+  if (modeButton) {
+    modeButton.material.map.dispose();
+    modeButton.material.map = createXRLabelTexture("Mode: " + (scenarioMode === "guided" ? "Guided" : "Challenge") + " (tap to change)", "#244f7a");
+    modeButton.material.needsUpdate = true;
+  }
+  if (difficultyButton) {
+    difficultyButton.material.map.dispose();
+    difficultyButton.material.map = createXRLabelTexture("Difficulty: " + scenarioDifficulty + " (tap to cycle)", "#244f7a");
+    difficultyButton.material.needsUpdate = true;
+  }
+}
+
+function createXRInterface() {
+  xrWelcomePanel = new THREE.Group();
+  xrWelcomePanel.name = "xrWelcomePanel";
+  xrWelcomePanel.position.set(0, -0.02, -1.45);
+  xrWelcomePanel.visible = false;
+
+  const panelCanvas = document.createElement("canvas");
+  panelCanvas.width = 1024;
+  panelCanvas.height = 768;
+  const context = panelCanvas.getContext("2d");
+  context.fillStyle = "rgba(5, 12, 26, 0.96)";
+  context.fillRect(0, 0, panelCanvas.width, panelCanvas.height);
+  context.strokeStyle = "#00d4ff";
+  context.lineWidth = 12;
+  context.strokeRect(8, 8, panelCanvas.width - 16, panelCanvas.height - 16);
+  context.textAlign = "center";
+  context.fillStyle = "#8de0ff";
+  context.font = "bold 58px Arial";
+  context.fillText("EARTHQUAKE TRAINING", 512, 100);
+  context.fillStyle = "#ffffff";
+  context.font = "34px Arial";
+  context.fillText("First-person safety practice", 512, 165);
+  context.font = "28px Arial";
+  context.fillText("Point a controller and press its trigger to select.", 512, 230);
+  context.fillText("Use the thumbstick to move; take cover under a sturdy desk.", 512, 275);
+  const panelTexture = new THREE.CanvasTexture(panelCanvas);
+  panelTexture.colorSpace = THREE.SRGBColorSpace;
+  const panelMesh = new THREE.Mesh(
+    new THREE.PlaneGeometry(1.35, 1.0),
+    new THREE.MeshBasicMaterial({ map: panelTexture, transparent: false, depthTest: false })
+  );
+  panelMesh.renderOrder = 10;
+  xrWelcomePanel.add(panelMesh);
+  xrWelcomePanel.add(createXRPanelButton("xrModeButton", "Mode: Guided (tap to change)", -0.16, "#244f7a"));
+  xrWelcomePanel.add(createXRPanelButton("xrDifficultyButton", "Difficulty: standard (tap to cycle)", -0.32, "#244f7a"));
+  xrWelcomePanel.add(createXRPanelButton("xrStartButton", "START SCENARIO", -0.47, "#087f55"));
+  camera.add(xrWelcomePanel);
+
+  xrHudPanel = new THREE.Group();
+  xrHudPanel.name = "xrHudPanel";
+  xrHudPanel.position.set(0, -0.48, -1.35);
+  xrHudPanel.visible = false;
+  xrHudCanvas = document.createElement("canvas");
+  xrHudCanvas.width = 1024;
+  xrHudCanvas.height = 256;
+  xrHudTexture = new THREE.CanvasTexture(xrHudCanvas);
+  xrHudTexture.colorSpace = THREE.SRGBColorSpace;
+  const hudMesh = new THREE.Mesh(
+    new THREE.PlaneGeometry(1.25, 0.31),
+    new THREE.MeshBasicMaterial({ map: xrHudTexture, transparent: true, depthTest: false })
+  );
+  hudMesh.renderOrder = 15;
+  xrHudPanel.add(hudMesh);
+  camera.add(xrHudPanel);
+}
+
+function updateXRInterface() {
+  if (!renderer || !renderer.xr.isPresenting) {
+    if (xrWelcomePanel) xrWelcomePanel.visible = false;
+    if (xrHudPanel) xrHudPanel.visible = false;
+    return;
+  }
+  const session = renderer.xr.getSession();
+  const hasDomOverlay = Boolean(session && session.domOverlayState);
+  if (xrWelcomePanel) xrWelcomePanel.visible = !hasDomOverlay && !timerStarted && !scenarioEnded;
+  if (!xrHudPanel) return;
+  xrHudPanel.visible = !hasDomOverlay && timerStarted && !scenarioEnded;
+  if (!xrHudPanel.visible) return;
+
+  const statusDiv = document.getElementById("quakeStatus");
+  const status = statusDiv ? statusDiv.textContent : "Scenario in progress";
+  const objectiveText = "Cover: " + (coverUsed ? "taken" : "not yet") +
+    " | Hold: " + (coverTimeTotal >= 3 ? "complete" : "in progress");
+  const scanText = "Hazard scan: " + (decisionLog.some((entry) => entry.action === "hazard_scan_complete") ? "complete" : "pending") +
+    " | Exit: " + (exitCompleted ? "complete" : "pending");
+  const textValue = [status, scenarioMode + " mode · " + scenarioDifficulty, objectiveText, scanText].join("\n");
+  if (textValue === lastXRHudText) return;
+  lastXRHudText = textValue;
+  const context = xrHudCanvas.getContext("2d");
+  context.clearRect(0, 0, xrHudCanvas.width, xrHudCanvas.height);
+  context.fillStyle = "rgba(5, 12, 26, 0.88)";
+  context.fillRect(0, 0, xrHudCanvas.width, xrHudCanvas.height);
+  context.strokeStyle = "#00d4ff";
+  context.lineWidth = 6;
+  context.strokeRect(4, 4, xrHudCanvas.width - 8, xrHudCanvas.height - 8);
+  context.textAlign = "left";
+  context.fillStyle = "#8de0ff";
+  context.font = "bold 32px Arial";
+  context.fillText(textValue.split("\n")[0].slice(0, 70), 28, 54);
+  context.fillStyle = "#ffffff";
+  context.font = "26px Arial";
+  context.fillText(textValue.split("\n")[1], 28, 108);
+  context.fillText(textValue.split("\n")[2], 28, 158);
+  context.fillText(textValue.split("\n")[3], 28, 208);
+  xrHudTexture.needsUpdate = true;
+}
+
 function onXRSessionStart() {
   resetCameraShake();
   if (controls && controls.isLocked) controls.unlock();
@@ -1211,6 +1362,9 @@ function onXRSessionStart() {
   moveState.backward = false;
   moveState.left = false;
   moveState.right = false;
+  lastXRHudText = "";
+  updateXRWelcomePanel();
+  updateXRInterface();
   showMessage("Use the thumbstick to move. Point a controller and press its trigger to interact.", 5000);
 }
 
@@ -1221,6 +1375,9 @@ function onXRSessionEnd() {
   camera.rotation.set(0, 0, 0);
   coverActive = false;
   coverTarget = null;
+  if (xrWelcomePanel) xrWelcomePanel.visible = false;
+  if (xrHudPanel) xrHudPanel.visible = false;
+  lastXRHudText = "";
 }
 
 function getPlayerWorldPosition(target = new THREE.Vector3()) {
@@ -1268,18 +1425,39 @@ function handleXRSelect(controller) {
   if (!room || !renderer || !renderer.xr.isPresenting) return;
   const raycaster = new THREE.Raycaster();
   raycaster.setFromXRController(controller);
-  const intersections = raycaster.intersectObjects(room.children, true);
+  const targets = xrWelcomePanel && xrWelcomePanel.visible ? [room, xrWelcomePanel] : [room];
+  const intersections = raycaster.intersectObjects(targets, true);
   const hit = intersections.find((intersection) => {
     if (intersection.distance >= 3.0) return false;
     let candidate = intersection.object;
     while (candidate && candidate !== room) {
-      if (["Door", "shelterZone", "desk"].includes(candidate.name) || candidate.userData?.physics) return true;
+      if (["Door", "shelterZone", "desk", "xrModeButton", "xrDifficultyButton", "xrStartButton"].includes(candidate.name) || candidate.userData?.physics) return true;
       candidate = candidate.parent;
     }
     return false;
   });
   if (!hit) {
     showMessage("Point at the desk to take cover, or at the door to open it.", 1800);
+    return;
+  }
+
+  if (hit.object.name === "xrModeButton") {
+    scenarioMode = scenarioMode === "guided" ? "challenge" : "guided";
+    updateXRWelcomePanel();
+    return;
+  }
+  if (hit.object.name === "xrDifficultyButton") {
+    const levels = ["practice", "standard", "intense"];
+    scenarioDifficulty = levels[(levels.indexOf(scenarioDifficulty) + 1) % levels.length];
+    updateXRWelcomePanel();
+    return;
+  }
+  if (hit.object.name === "xrStartButton") {
+    if (!window.userData) {
+      window.userData = { name: "Guest", surname: "User", startTime: new Date().toLocaleString("en-GB") };
+    }
+    if (xrWelcomePanel) xrWelcomePanel.visible = false;
+    startScenario();
     return;
   }
 
@@ -2002,6 +2180,7 @@ function animate() {
   updateObjectivePanel();
 
   updateStatus();
+  updateXRInterface();
 
   if (timerStarted && !scenarioEnded) {
     const elapsedTime = ((Date.now() - startTime) / 1000).toFixed(1);
