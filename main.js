@@ -2174,6 +2174,7 @@ async function createRoom() {
       stability: 0.5,
       allowTopple: true,
       label: "Guest chair",
+      profile: "guestChair",
     });
   }
 
@@ -2208,6 +2209,7 @@ async function createRoom() {
       stability: 0.55,
       allowTopple: true,
       label: "Heater",
+      profile: "heater",
     });
   }
 
@@ -2312,12 +2314,12 @@ function createFallbackMonitor() {
     metalness: 0.7,
   });
   const monitor = new THREE.Mesh(monitorGeometry, monitorMaterial);
-  monitor.position.set(0, 0.98, -0.18);
+  monitor.position.set(0, 0.11, 0);
   monitor.rotation.x = -0.08;
   monitor.castShadow = true;
   monitor.receiveShadow = true;
   monitor.name = "monitor";
-  room.add(monitor);
+  monitorAssembly.add(monitor);
 
   const screenGeometry = new THREE.BoxGeometry(0.5, 0.32, 0.01);
   const screenMaterial = new THREE.MeshStandardMaterial({
@@ -2328,7 +2330,7 @@ function createFallbackMonitor() {
     metalness: 0.1,
   });
   const screen = new THREE.Mesh(screenGeometry, screenMaterial);
-  screen.position.set(0, 0.98, -0.155);
+  screen.position.set(0, 0.11, 0.025);
   screen.rotation.x = -0.08;
   monitorAssembly.add(screen);
 
@@ -2339,13 +2341,14 @@ function createFallbackMonitor() {
     metalness: 0.6,
   });
   const neck = new THREE.Mesh(neckGeometry, standMaterial);
-  neck.position.set(0, 0.855, -0.18);
+  neck.position.set(0, -0.015, 0);
   monitorAssembly.add(neck);
 
   const baseGeometry = new THREE.CylinderGeometry(0.12, 0.14, 0.02, 24);
   const base = new THREE.Mesh(baseGeometry, standMaterial);
-  base.position.set(0, 0.785, -0.18);
+  base.position.set(0, -0.085, 0);
   monitorAssembly.add(base);
+  monitorAssembly.position.set(0, 0.87, -0.18);
   room.add(monitorAssembly);
 
   const keyboardGeometry = new THREE.BoxGeometry(0.42, 0.015, 0.14);
