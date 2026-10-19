@@ -1,15 +1,15 @@
 {
-  "name": "earthquake-sim",
+  "name": "earthquake-awareness-simulator",
   "version": "1.0.0",
   "private": true,
-  "description": "Web-based 3D earthquake emergency training simulator built with Three.js.",
-  "homepage": "https://furkankoykiran.github.io/EarthquakeSim/",
+  "description": "Laptop-friendly browser-based 3D earthquake-awareness training prototype built with Three.js and Vite.",
+  "homepage": "https://adityab411.github.io/Earthquake_Awareness_Simulator/",
   "repository": {
     "type": "git",
-    "url": "https://github.com/furkankoykiran/EarthquakeSim.git"
+    "url": "https://github.com/AdityaB411/Earthquake_Awareness_Simulator.git"
   },
   "bugs": {
-    "url": "https://github.com/furkankoykiran/EarthquakeSim/issues"
+    "url": "https://github.com/AdityaB411/Earthquake_Awareness_Simulator/issues"
   },
   "keywords": [
     "earthquake",
