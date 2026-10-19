@@ -1200,8 +1200,8 @@ function updateXRMovement(delta) {
     if (!source.gamepad) continue;
     const axes = source.gamepad.axes;
     if (!axes || axes.length < 2) continue;
-    const x = axes.length >= 4 ? axes[2] : axes[0];
-    const y = axes.length >= 4 ? axes[3] : axes[1];
+    const x = axes[0];
+    const y = axes[1];
     if (Math.abs(x) > Math.abs(axisX)) axisX = x;
     if (Math.abs(y) > Math.abs(axisY)) axisY = y;
   }
