@@ -1125,6 +1125,7 @@ async function init() {
     optionalFeatures: ["dom-overlay"],
   });
   vrButton.id = "webxr-vr-button";
+  vrButton.style.left = "auto";
   document.body.appendChild(vrButton);
 
   renderer.xr.addEventListener("sessionstart", onXRSessionStart);
@@ -1223,7 +1224,7 @@ function createXRLabelTexture(label, backgroundColor = "#087f8c") {
   context.font = "bold 34px Arial";
   context.textAlign = "center";
   context.textBaseline = "middle";
-  context.fillText(label, canvas.width / 2, canvas.height / 2);
+  context.fillText(label, canvas.width / 2, canvas.height / 2, canvas.width - 24);
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
   return texture;
@@ -1380,7 +1381,7 @@ function updateXRInterface() {
   context.textAlign = "left";
   context.fillStyle = "#8de0ff";
   context.font = "bold 32px Arial";
-  context.fillText(textValue.split("\n")[0].slice(0, 70), 28, 54);
+  context.fillText(textValue.split("\n")[0].slice(0, 70), 28, 54, 960);
   context.fillStyle = "#ffffff";
   context.font = "26px Arial";
   context.fillText(textValue.split("\n")[1], 28, 108);
