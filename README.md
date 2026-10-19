@@ -2,7 +2,7 @@
 
 A laptop-friendly, browser-based 3D earthquake-preparedness training prototype adapted from [EarthquakeSim by Furkan Koykiran](https://github.com/furkankoykiran/EarthquakeSim). It uses Three.js and Vite to let a user explore an office, experience a simulated earthquake sequence, practise taking cover, and review a score and decision log.
 
-> **Current status:** this repository is a desktop 3D/WebGL prototype. A first WebXR entry point has been added on the `feature/webxr-foundation` branch; it still needs testing on a compatible immersive browser/headset. The main branch remains the current desktop baseline until the feature branch is reviewed and merged. The earthquake motion and object-toppling rules are illustrative game logic, not a scientific ground-motion or structural-engineering model. Use the app for education and demonstration, not as a substitute for official emergency guidance or certified training.
+> **Current status:** this repository is a desktop 3D/WebGL prototype. WebXR support, thumbstick locomotion, and controller pointing/selection have been added on the `feature/webxr-foundation` branch; they still need testing on a compatible immersive browser/headset. The main branch remains the current desktop baseline until the feature branch is reviewed and merged. The earthquake motion and object-toppling rules are illustrative game logic, not a scientific ground-motion or structural-engineering model. Use the app for education and demonstration, not as a substitute for official emergency guidance or certified training.
 
 ## Current features
 
@@ -57,7 +57,7 @@ The container serves the app on port 8080.
 
 ## Known limitations to address before course submission
 
-1. **WebXR needs end-to-end validation.** The `feature/webxr-foundation` branch enables Three.js WebXR and adds the standard VR entry button. Headset locomotion and controller interaction are not yet complete; validate these on compatible immersive hardware before describing immersive mode as fully functional. Desktop mode remains the supported development baseline.
+1. **WebXR needs end-to-end validation.** The `feature/webxr-foundation` branch enables Three.js WebXR and adds the standard VR entry button. Basic headset tracking, thumbstick locomotion, and controller-trigger interactions are implemented but remain untested on compatible immersive hardware. Validate the full experience before describing immersive mode as fully functional. Desktop mode remains the supported development baseline.
 2. **Safety behaviour needs review.** The current cover zone is an invisible volume around the desk; the interaction mainly crouches the camera and locks movement rather than simulating a verified Drop, Cover, and Hold On action. The scenario should be checked against official safety guidance before being used as instructional material.
 3. **Physics are approximate.** Event magnitudes/durations and object topple/damage events are generated procedurally. They should not be presented as real earthquake predictions or scientifically accurate structural responses.
 4. **Assessment is educational.** The short knowledge check reinforces safety guidance but is not a validated readiness test or certification.\n5. **Scoring is heuristic.** The score represents actions inside this prototype, not a validated measure of real-world readiness. The score display reflects a maximum of 180 points under the current scoring rules.
@@ -65,7 +65,7 @@ The container serves the app on port 8080.
 
 ## Suggested course-project improvements
 
-- Implement WebXR with an explicit desktop fallback
+- Validate WebXR with an explicit desktop fallback
 - Teach and assess Drop, Cover, and Hold On with clear in-simulation explanations
 - Compare pre-test and post-test results in a future iteration so learning outcomes can be measured
 - Provide a transparent scoring rubric and scenario debrief
