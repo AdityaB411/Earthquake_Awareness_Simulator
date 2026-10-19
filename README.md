@@ -77,7 +77,8 @@ The container serves the app on port 8080.
 3. **Physics are approximate.** Event magnitudes/durations and object topple/damage events are generated procedurally. They should not be presented as real earthquake predictions or scientifically accurate structural responses.
 4. **Assessment is educational.** The short knowledge check reinforces safety guidance but is not a validated readiness test or certification.
 5. **Scoring is heuristic.** The score normalizes response-time performance across scenario lengths (up to 120 points) and adds time-protected points (up to 60), for a maximum of 180. It represents actions inside this prototype, not a validated measure of real-world readiness.
-6. **Asset attribution should be verified.** The code is MIT-licensed, but confirm the licences/attributions for each bundled 3D model and environment asset before redistributing the project publicly.
+6. **Effects are stylized and performance-sensitive.** Dust, light flicker, object falls, and synthesized sounds are procedural cues, not real debris physics or recorded earthquake audio. Test visuals and frame rate on the target laptop and in immersive WebXR; reduce particle counts or flicker intensity if performance or comfort suffers.
+7. **Asset attribution should be verified.** The code is MIT-licensed, but confirm the licences/attributions for each bundled 3D model and environment asset before redistributing the project publicly.
 
 ## Suggested course-project improvements
 
