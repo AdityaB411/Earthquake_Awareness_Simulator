@@ -67,7 +67,8 @@ The container serves the app on port 8080.
 - `public/assets/3D/`: GLB models
 - `public/assets/hdri/`: environment maps
 - `vite.config.js`: development server and asset base settings
-- `.github/workflows/build.yml`: CI dependency-install and production-build check
+- `scripts/validate-project.mjs`: checks static UI references and bundled model assets
+- `.github/workflows/build.yml`: CI source validation and production-build check
 - `.github/workflows/pages.yml`: GitHub Pages build/deployment workflow
 
 ## Known limitations to address before course submission
