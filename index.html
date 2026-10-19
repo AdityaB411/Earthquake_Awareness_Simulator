@@ -270,20 +270,11 @@
             color: #ddd;
           "></div>
 
-      <div style="text-align: center; margin-top: 30px">
-        <button onclick="location.reload()" style="
-              background: linear-gradient(145deg, #4caf50, #45a049);
-              color: white;
-              border: none;
-              border-radius: 10px;
-              padding: 15px 40px;
-              font-size: 18px;
-              font-weight: bold;
-              cursor: pointer;
-              transition: transform 0.2s;
-            " onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
-          🔄 Try Again
-        </button>
+      <div id="knowledgeCheckSummary" class="knowledge-check-summary" aria-live="polite"></div>
+      <div class="result-actions">
+        <button id="takeKnowledgeCheckBtn" type="button">🧠 Take Safety Knowledge Check</button>
+        <button id="downloadReportBtn" type="button" disabled>⬇ Download Training Report (CSV)</button>
+        <button id="tryAgainBtn" type="button">🔄 Try Again</button>
       </div>
 
       <div style="
@@ -306,6 +297,16 @@
     </div>
   </div>
 
+  <section id="knowledgeCheck" class="knowledge-check" aria-hidden="true" aria-labelledby="knowledgeCheckTitle">
+    <div class="knowledge-check-card">
+      <p class="assessment-eyebrow">GUIDED ASSESSMENT</p>
+      <h2 id="knowledgeCheckTitle">Earthquake Safety Knowledge Check</h2>
+      <p class="assessment-intro">Answer three short questions about the safety choices you practised. This educational check is not a certification of readiness.</p>
+      <div id="assessmentQuestions"></div>
+      <p id="assessmentFeedback" class="assessment-feedback" aria-live="polite"></p>
+      <button id="assessmentSubmit" type="button">Submit answers</button>
+    </div>
+  </section>
 
   <script type="module" src="./main.js"></script>
 
