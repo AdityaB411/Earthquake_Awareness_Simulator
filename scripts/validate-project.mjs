@@ -11,7 +11,7 @@ const failures = [];
 
 for (const scriptName of ["dev", "preview"]) {
   const command = packageJson.scripts?.[scriptName] || "";
-  if (/\\s--host(?:\\s|$)/.test(command)) {
+  if (/\s--host(?:\s|$)/.test(command)) {
     failures.push(`The ${scriptName} script overrides the local-only Vite host: ${command}`);
   }
 }
