@@ -875,7 +875,8 @@ function updateStatus() {
     statusDiv.style.animation = "pulse 0.5s infinite";
   } else if (quakeTimeline.length > 0) {
     const elapsed = timerStarted ? (Date.now() - scenarioStartTime) / 1000 : 0;
-    if (quakeTimeline.length > 0 && elapsed < quakeTimeline[0].start) {
+    const mainQuakeHasStarted = decisionLog.some((entry) => entry.action === "quake_started");
+    if (!mainQuakeHasStarted && elapsed < quakeTimeline[0].start) {
       statusDiv.textContent = "Get ready: locate a sturdy desk and prepare to take cover.";
       statusDiv.style.color = "#00d4ff";
       statusDiv.style.borderColor = "#00d4ff";
@@ -987,55 +988,59 @@ function exportToCSV(totalTime, score, resultText, toppledCount, damagedCount) {
     startTime: new Date().toLocaleString("en-GB"),
   };
 
+  function csvCell(value) {
+    const raw = String(value ?? "").replace(/\r?\n/g, " ");
+    const safe = /^[=+\-@]/.test(raw) ? "'" + raw : raw;
+    return '"' + safe.replace(/"/g, '""') + '"';
+  }
+
   function formatElapsedTime(seconds) {
     const safeSeconds = Number.isFinite(seconds) ? Math.max(0, seconds) : 0;
     const totalSecondsInt = Math.floor(safeSeconds);
     const tenths = Math.floor((safeSeconds - totalSecondsInt) * 10 + 1e-9);
-
     const mins = Math.floor(totalSecondsInt / 60);
     const secs = totalSecondsInt % 60;
-
-    const mm = String(mins).padStart(2, "0");
-    const ss = String(secs).padStart(2, "0");
-    return `${mm}:${ss}.${tenths}`;
+    return String(mins).padStart(2, "0") + ":" + String(secs).padStart(2, "0") + "." + tenths;
   }
 
   let csvContent = "\uFEFF";
   csvContent += "EARTHQUAKE TRAINING SIMULATION REPORT\n";
   csvContent += "--------------------------------\n";
-  csvContent += `Name;${user.name} ${user.surname}\n`;
-  csvContent += `Date;${user.startTime}\n`;
-  csvContent += `Total time;${totalTime} seconds\n`;
-  csvContent += `Score;${score}\n`;
-  csvContent += `Objects toppled;${toppledCount}\n`;
-  csvContent += `Objects damaged;${damagedCount}\n`;
-  csvContent += `Result;${resultText.replace(/\n/g, " ")}\n\n`;
-
+  csvContent += csvCell("Name") + ";" + csvCell(user.name + " " + user.surname) + "\n";
+  csvContent += csvCell("Date") + ";" + csvCell(user.startTime) + "\n";
+  csvContent += csvCell("Total time") + ";" + csvCell(totalTime + " seconds") + "\n";
+  csvContent += csvCell("Score") + ";" + csvCell(score) + "\n";
+  csvContent += csvCell("Objects toppled") + ";" + csvCell(toppledCount) + "\n";
+  csvContent += csvCell("Objects damaged") + ";" + csvCell(damagedCount) + "\n";
+  csvContent += csvCell("Result") + ";" + csvCell(resultText) + "\n\n";
   csvContent += "--------------------------------\n";
   csvContent += "DETAILED DECISION LOG\n";
   csvContent += "Time (mm:ss.s);Action;Description\n";
 
   decisionLog.forEach((log) => {
     const timeSeconds = typeof log.time === "number" ? log.time / 1000 : Number(log.time);
-    const timeFormatted = formatElapsedTime(timeSeconds);
-    const time = `'${timeFormatted}`;
-    const desc = log.description.replace(/;/g, ",");
-    csvContent += `${time};${log.action};${desc}\n`;
+    const time = "'" + formatElapsedTime(timeSeconds);
+    csvContent += csvCell(time) + ";" + csvCell(log.action) + ";" + csvCell(log.description) + "\n";
   });
 
-  csvContent += "Knowledge check score;" + (postKnowledgeScore === null ? "Not completed" : postKnowledgeScore + "/3") + "\n";
+  csvContent += csvCell("Knowledge check score") + ";" +
+    csvCell(postKnowledgeScore === null ? "Not completed" : postKnowledgeScore + "/3") + "\n";
 
   const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
-
   const dateStr = new Date().toISOString().slice(0, 10);
+  const safeFilename = (value) => String(value || "User")
+    .replace(/[<>:"/\\|?*\x00-\x1F]/g, "_")
+    .replace(/\s+/g, "_");
   link.setAttribute("href", url);
-  link.setAttribute("download", `Earthquake_Training_Report_${user.name}_${user.surname}_${dateStr}.csv`);
+  link.setAttribute("download", "Earthquake_Training_Report_" + safeFilename(user.name) + "_" +
+    safeFilename(user.surname) + "_" + dateStr + ".csv");
   link.style.visibility = "hidden";
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
+  URL.revokeObjectURL(url);
 }
 
 // ----------------- GUI ------------------------
