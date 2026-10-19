@@ -2,7 +2,7 @@
 <html lang="en">
 
 <head>
-  <title>3D Deprem Eğitim Simülatörü</title>
+  <title>3D Earthquake Training Simulator</title>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0" />
   <link type="text/css" rel="stylesheet" href="./styles/style.css" />
@@ -10,7 +10,7 @@
 
 <body>
   <div id="ui-container">
-    <!-- Crosshair / Nişangah -->
+    <!-- Crosshair -->
     <div id="crosshair" style="
           position: fixed;
           top: 50%;
@@ -27,26 +27,26 @@
           display: none;
         "></div>
     <div id="title">
-      <h1>3D Deprem Acil Durum Eğitim Simülatörü</h1>
+      <h1>3D Earthquake Emergency Training Simulator</h1>
     </div>
 
     <div id="instructions" class="collapsed">
       <h3 id="instructionsToggle" style="cursor: pointer; user-select: none; margin-bottom: 0">
-        📋 Senaryo:
+        📋 Scenario:
         <span id="toggleIcon" style="float: right; font-size: 14px">▼</span>
       </h3>
       <div id="instructionsContent">
         <p style="font-style: italic; color: #ffaa00">
-          Ofis ortamında <strong>ani bir deprem</strong> meydana geliyor.
+          A <strong>sudden earthquake</strong> occurs in an office environment.
         </p>
-        <h4>Ne Yapacaksınız?</h4>
-        <p><strong>1.</strong> Hemen sağlam bir nesnenin altına/yanına geçin.</p>
-        <p><strong>2.</strong> Masanin cevresine gelip [E] ile korunma pozisyonu alin.</p>
-        <p><strong>3.</strong> Sarsıntı boyunca korunmada kalın.</p>
-        <p><strong>4.</strong> Artçı sarsıntılara hazırlıklı olun.</p>
-        <p><strong>5.</strong> Sarsıntı bitince güvenli çıkışa yönelin.</p>
-        <p><strong>DİKKAT:</strong> Isitici ve elektrik panosu cevresi guvenli degildir.</p>
-        <p><strong>DİKKAT:</strong> Hafif ve dengesiz objeler devrilebilir.</p>
+        <h4>What Should You Do?</h4>
+        <p><strong>1.</strong> Drop to your hands and knees, and protect your head and neck.</p>
+        <p><strong>2.</strong> If a sturdy desk or table is nearby, get underneath it and press [E] to take cover in the simulation.</p>
+        <p><strong>3.</strong> Hold on to your cover and stay protected while shaking continues.</p>
+        <p><strong>4.</strong> Be prepared for possible aftershocks.</p>
+        <p><strong>5.</strong> When shaking stops, check for hazards and use the exit only when it is safe.</p>
+        <p><strong>WARNING:</strong> Do not use the heater or electrical-panel area as a cover location in this simulation.</p>
+        <p><strong>WARNING:</strong> Lightweight or unstable objects may topple.</p>
       </div>
     </div>
 
@@ -65,10 +65,10 @@
           display: none;
           z-index: 100;
         ">
-      Geçen Süre: 0.0s
+      Elapsed time: 0.0 s
     </div>
 
-    <!-- Kontrol Bilgilendirme Ekranı -->
+    <!-- Controls introduction -->
     <div id="controls-intro" style="
           position: fixed;
           top: 50%;
@@ -80,45 +80,45 @@
           padding: 40px;
           color: white;
           z-index: 200;
-          display: none; /* JS ile açılacak */
+          display: none; /* Shown by JavaScript */
           text-align: center;
           max-width: 600px;
           width: 90%;
           box-shadow: 0 0 50px rgba(0,0,0,0.8);
         ">
-      <h2 style="color: #4caf50; font-size: 32px; margin-bottom: 30px; text-transform: uppercase;">Simülasyon
-        Kontrolleri</h2>
+      <h2 style="color: #4caf50; font-size: 32px; margin-bottom: 30px; text-transform: uppercase;">Simulation
+        Controls</h2>
 
       <div style="display: flex; justify-content: space-around; margin-bottom: 40px; flex-wrap: wrap; gap: 20px;">
         <!-- WASD -->
         <div style="text-align: center;">
           <div style="font-size: 40px; margin-bottom: 10px;">⌨️</div>
           <div style="font-weight: bold; color: #ffaa00; font-size: 24px;">W A S D</div>
-          <div style="color: #aaa;">Hareket Et</div>
+          <div style="color: #aaa;">Move</div>
         </div>
 
         <!-- MOUSE -->
         <div style="text-align: center;">
           <div style="font-size: 40px; margin-bottom: 10px;">🖱️</div>
           <div style="font-weight: bold; color: #ffaa00; font-size: 24px;">MOUSE</div>
-          <div style="color: #aaa;">Çevreyi İncele</div>
+          <div style="color: #aaa;">Look Around</div>
         </div>
 
         <!-- E KEY -->
         <div style="text-align: center;">
           <div style="font-size: 40px; margin-bottom: 10px;">👉</div>
-          <div style="font-weight: bold; color: #ffaa00; font-size: 24px;">[ E ] TUŞU</div>
-          <div style="color: #aaa;">Etkileşim / Seçim</div>
+          <div style="font-weight: bold; color: #ffaa00; font-size: 24px;">E KEY</div>
+          <div style="color: #aaa;">Interact / Select</div>
         </div>
       </div>
 
       <div
         style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px; margin-bottom: 30px; font-style: italic;">
-        <p>İpucu: Sağlam nesnelerin yanında kalın ve korunma alın.</p>
+        <p>Tip: Take cover under a sturdy desk or table and protect your head and neck.</p>
       </div>
 
       <div style="margin-bottom: 30px; display: flex; gap: 15px; justify-content: center;">
-        <input type="text" id="userName" placeholder="Adınız" style="
+        <input type="text" id="userName" placeholder="First name" style="
           padding: 15px;
           border-radius: 10px;
           border: 2px solid #4caf50;
@@ -127,7 +127,7 @@
           font-size: 16px;
           width: 45%;
         ">
-        <input type="text" id="userSurname" placeholder="Soyadınız" style="
+        <input type="text" id="userSurname" placeholder="Last name" style="
           padding: 15px;
           border-radius: 10px;
           border: 2px solid #4caf50;
@@ -149,11 +149,11 @@
             cursor: pointer;
             transition: all 0.3s;
           " onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
-        ✅ Kullanımı Anladım
+        ✅ I Understand the Controls
       </button>
     </div>
 
-    <!-- Senaryo Başlat Butonu -->
+    <!-- Start scenario button -->
     <div id="startScenarioBtn" style="
           position: fixed;
           top: 45%;
@@ -176,7 +176,7 @@
             transition: all 0.3s ease;
             text-transform: uppercase;
           " onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
-        ▶️ Senaryoyu Başlat
+        ▶️ Start Scenario
       </button>
     </div>
 
@@ -200,12 +200,12 @@
           box-shadow: 0 0 30px rgba(255, 170, 0, 0.8);
         "></div>
 
-    <div id="quakeStatus">Deprem Durumu: Beklemede</div>
+    <div id="quakeStatus">Earthquake status: Waiting</div>
 
-    <div id="info">Web Tabanlı 3D Deprem Eğitimi | ISG Simülasyonu</div>
+    <div id="info">Browser-Based 3D Earthquake Training | Workplace Safety Simulation</div>
   </div>
 
-  <!-- Sonuç Ekranı -->
+  <!-- Results screen -->
   <div id="resultScreen" style="
         position: fixed;
         top: 0;
@@ -226,7 +226,7 @@
           border: 3px solid #4caf50;
         ">
       <h1 id="resultTitle" style="text-align: center; font-size: 32px; margin-bottom: 20px">
-        Sonuç
+        Scenario Results
       </h1>
 
       <p id="resultText" style="
@@ -244,7 +244,7 @@
               border-radius: 10px;
               text-align: center;
             ">
-          <h3 style="color: #ffaa00">Puan</h3>
+          <h3 style="color: #ffaa00">Score</h3>
           <p id="scoreText" style="font-size: 24px; font-weight: bold"></p>
         </div>
 
@@ -254,7 +254,7 @@
               border-radius: 10px;
               text-align: center;
             ">
-          <h3 style="color: #4af">Süre</h3>
+          <h3 style="color: #4af">Time</h3>
           <p id="timeText" style="font-size: 24px; font-weight: bold"></p>
         </div>
       </div>
@@ -281,7 +281,7 @@
               cursor: pointer;
               transition: transform 0.2s;
             " onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
-          🔄 Tekrar Dene
+          🔄 Try Again
         </button>
       </div>
 
@@ -293,31 +293,23 @@
             border-radius: 5px;
             color: #ddd;
           ">
-        <h4 style="color: #4caf50">📚 Öğrenilenler:</h4>
+        <h4 style="color: #4caf50">📚 Key Takeaways:</h4>
         <ul style="line-height: 1.8">
-          <li>Deprem anında sağlam nesnelerin yanında kalın</li>
-          <li>Korunma pozisyonunu erken almak yaralanma riskini azaltır</li>
-          <li>Artçı sarsıntılar beklenir, aceleyle hareket etmeyin</li>
-          <li>Devrilen nesnelerden uzak durun</li>
-          <li>Sarsıntı bitince kontrollü şekilde çıkışa yönelin</li>
+          <li>Drop, Cover, and Hold On; use a sturdy desk or table when one is nearby.</li>
+          <li>Taking cover promptly can help reduce the risk of injury.</li>
+          <li>Aftershocks may occur; do not rush to move while shaking continues.</li>
+          <li>Watch for fallen objects and other hazards.</li>
+          <li>After shaking stops, check for hazards and exit carefully when safe.</li>
         </ul>
       </div>
     </div>
   </div>
 
-  <script type="importmap">
-      {
-        "imports": {
-          "three": "../build/three.module.js",
-          "three/addons/": "./jsm/"
-        }
-      }
-    </script>
 
   <script type="module" src="./main.js"></script>
 
   <script>
-    // Senaryo penceresi açılır-kapanır özelliği
+    // Toggle the scenario instructions panel.
     document.addEventListener("DOMContentLoaded", function () {
       const instructionsDiv = document.getElementById("instructions");
       const toggleButton = document.getElementById("instructionsToggle");
