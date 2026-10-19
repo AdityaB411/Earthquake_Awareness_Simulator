@@ -6,9 +6,6 @@ export default defineConfig({
   base: "./",
   server: {
     host: "127.0.0.1",
-    port: 5173,
-    // Allow all hosts for testing and alternate domains
-    allowedHosts: true,
-  },
+    port: 5173,  },
 });
 
