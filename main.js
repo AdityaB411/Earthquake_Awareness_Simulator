@@ -215,6 +215,7 @@ let rumbleGain = null;
 let rumbleFilter = null;
 let rumbleSubOsc = null;
 let rumbleSubGain = null;
+let lastImpactSoundTime = -1;
 let ambientLightRef = null;
 let hemiLightRef = null;
 let ceilingLights = [];
@@ -278,9 +279,12 @@ function stopRumble() {
 function playImpactSound(intensity = 0.7) {
   if (!rumbleContext || rumbleContext.state === "closed") return;
   if (rumbleContext.state === "suspended") rumbleContext.resume();
+  const now = rumbleContext.currentTime;
+  // Several props can hit together; gently limit overlapping synthetic impacts.
+  if (lastImpactSoundTime >= 0 && now - lastImpactSoundTime < 0.085) return;
+  lastImpactSoundTime = now;
   const oscillator = rumbleContext.createOscillator();
   const gain = rumbleContext.createGain();
-  const now = rumbleContext.currentTime;
   oscillator.type = "triangle";
   oscillator.frequency.setValueAtTime(95 + Math.random() * 45, now);
   oscillator.frequency.exponentialRampToValueAtTime(38, now + 0.22);
@@ -294,7 +298,7 @@ function playImpactSound(intensity = 0.7) {
 
 function createDustSystem() {
   if (!scene || dustPoints) return;
-  const count = 260;
+  const count = 180;
   dustPositions = new Float32Array(count * 3);
   dustSeeds = new Float32Array(count);
   for (let i = 0; i < count; i += 1) {
@@ -319,8 +323,9 @@ function createDustSystem() {
 }
 
 function createDustBurst(position, intensity = 0.7) {
-  if (!scene || dustBursts.length >= 8) return;
-  const count = 24;
+  const xrMode = Boolean(renderer && renderer.xr.isPresenting);
+  if (!scene || dustBursts.length >= (xrMode ? 4 : 6)) return;
+  const count = xrMode ? 12 : 18;
   const positions = new Float32Array(count * 3);
   const velocities = [];
   for (let i = 0; i < count; i += 1) {
@@ -347,23 +352,42 @@ function createDustBurst(position, intensity = 0.7) {
 
 function updateAtmosphere(intensity, delta, time) {
   const shake = THREE.MathUtils.clamp(intensity, 0, 1.2);
-  if (ambientLightRef) ambientLightRef.intensity = 1.2 - shake * 0.18;
-  if (hemiLightRef) hemiLightRef.intensity = 0.5 - shake * 0.08;
+  const xrMode = Boolean(renderer && renderer.xr.isPresenting);
+  const dt = Math.min(Math.max(delta, 0), 0.05);
+  const easing = 1 - Math.exp(-7 * dt);
+
+  // Smooth target changes avoid per-frame random flashes, which can be uncomfortable in VR.
+  const ambientTarget = 1.2 - shake * 0.16;
+  const hemisphereTarget = 0.5 - shake * 0.07;
+  if (ambientLightRef) ambientLightRef.intensity += (ambientTarget - ambientLightRef.intensity) * easing;
+  if (hemiLightRef) hemiLightRef.intensity += (hemisphereTarget - hemiLightRef.intensity) * easing;
+
   ceilingLights.forEach((light, index) => {
-    const flickerAmount = shake > 0.12 ? shake * (0.2 + Math.random() * 0.55) : 0;
-    light.intensity = Math.max(0.35, 2.0 * (1 - flickerAmount));
-    light.color.setHSL(0.14, 0.24, shake > 0.55 && Math.sin(time * 29 + index * 2) > 0.84 ? 0.28 : 0.95);
+    const flickerPhase = time * (xrMode ? 5.2 : 8.5) + index * 1.73;
+    const flickerWave = 0.5 + 0.5 * Math.sin(flickerPhase);
+    const flickerLimit = xrMode ? 0.14 : 0.36;
+    const flickerAmount = shake > 0.12
+      ? Math.min(flickerLimit, shake * (0.035 + flickerWave * 0.22))
+      : 0;
+    const targetIntensity = Math.max(xrMode ? 0.72 : 0.38, 2.0 * (1 - flickerAmount));
+    light.intensity += (targetIntensity - light.intensity) * easing;
   });
 
   if (dustPoints) {
-    dustPoints.material.opacity = shake > 0.08 ? Math.min(0.34, 0.06 + shake * 0.22) : 0;
+    const dustOpacityLimit = xrMode ? 0.19 : 0.30;
+    dustPoints.material.size = xrMode ? 0.018 : 0.025;
+    dustPoints.material.opacity = shake > 0.08
+      ? Math.min(dustOpacityLimit, 0.035 + shake * (xrMode ? 0.14 : 0.20))
+      : 0;
     dustPoints.visible = dustPoints.material.opacity > 0.01;
+
     if (dustPoints.visible && dustPositions) {
+      const driftScale = xrMode ? 0.7 : 1;
       for (let i = 0; i < dustSeeds.length; i += 1) {
         const offset = i * 3;
-        dustPositions[offset] += Math.sin(time * 1.7 + dustSeeds[i]) * delta * (0.08 + shake * 0.25);
-        dustPositions[offset + 1] += delta * (0.025 + shake * 0.11);
-        dustPositions[offset + 2] += Math.cos(time * 1.4 + dustSeeds[i]) * delta * (0.08 + shake * 0.25);
+        dustPositions[offset] += Math.sin(time * 1.7 + dustSeeds[i]) * dt * (0.08 + shake * 0.25) * driftScale;
+        dustPositions[offset + 1] += dt * (0.025 + shake * 0.11);
+        dustPositions[offset + 2] += Math.cos(time * 1.4 + dustSeeds[i]) * dt * (0.08 + shake * 0.25) * driftScale;
         if (dustPositions[offset + 1] > 2.95) {
           dustPositions[offset + 1] = 0.12;
           dustPositions[offset] = randomRange(-2.25, 2.25);
@@ -376,14 +400,14 @@ function updateAtmosphere(intensity, delta, time) {
 
   for (let i = dustBursts.length - 1; i >= 0; i -= 1) {
     const burst = dustBursts[i];
-    burst.age += delta;
+    burst.age += dt;
     const positions = burst.points.geometry.attributes.position;
     for (let j = 0; j < burst.velocities.length; j += 1) {
       const velocity = burst.velocities[j];
-      velocity.y -= 1.2 * delta;
-      positions.array[j * 3] += velocity.x * delta;
-      positions.array[j * 3 + 1] += velocity.y * delta;
-      positions.array[j * 3 + 2] += velocity.z * delta;
+      velocity.y -= 1.2 * dt;
+      positions.array[j * 3] += velocity.x * dt;
+      positions.array[j * 3 + 1] += velocity.y * dt;
+      positions.array[j * 3 + 2] += velocity.z * dt;
     }
     positions.needsUpdate = true;
     burst.points.material.opacity = Math.max(0, 0.58 * (1 - burst.age / burst.lifetime));
@@ -596,6 +620,22 @@ function getMagnitudeScale(magnitude) {
 }
 
 function startQuake(event) {
+  const pulseCount = Math.max(3, Math.min(8, Math.round(event.duration / 2.8)));
+  const pulseSpacing = event.duration / pulseCount;
+  const pulses = Array.from({ length: pulseCount }, (_, index) => {
+    const nominalCenter = pulseSpacing * (index + 0.5);
+    const center = THREE.MathUtils.clamp(
+      nominalCenter + randomRange(-pulseSpacing * 0.22, pulseSpacing * 0.22),
+      0.45,
+      event.duration - 0.35
+    );
+    return {
+      center,
+      width: randomRange(event.label === "main" ? 0.42 : 0.34, event.label === "main" ? 1.0 : 0.78),
+      strength: randomRange(event.label === "main" ? 0.62 : 0.42, 1.0),
+    };
+  }).sort((a, b) => a.center - b.center);
+
   activeQuake = {
     start: event.start,
     duration: event.duration,
@@ -604,6 +644,7 @@ function startQuake(event) {
     phase: Math.random() * Math.PI * 2,
     waveFrequency: randomRange(0.8, 1.8),
     waveSpeed: randomRange(1.5, 3.5),
+    pulses,
     coverScored: false,
   };
 
@@ -627,16 +668,24 @@ function endActiveQuake() {
 
 function computeIntensity(quake, elapsed) {
   const timeLeft = quake.duration - elapsed;
-  const ramp = Math.min(elapsed / 2.0, 1.0);
-  const fade = Math.min(timeLeft / 2.5, 1.0);
-  const envelope = ramp * fade;
-  const wave =
-    0.6 +
-    0.4 *
-      Math.sin(elapsed * quake.waveFrequency * Math.PI * 2 + quake.phase);
-  const noise = 0.85 + 0.3 * Math.sin(elapsed * quake.waveSpeed + quake.phase);
+  const rampProgress = THREE.MathUtils.clamp(elapsed / 1.25, 0, 1);
+  const fadeProgress = THREE.MathUtils.clamp(timeLeft / 2.0, 0, 1);
+  const ramp = rampProgress * rampProgress * (3 - 2 * rampProgress);
+  const fade = fadeProgress * fadeProgress * (3 - 2 * fadeProgress);
 
-  return envelope * wave * noise * getMagnitudeScale(quake.magnitude);
+  // A sequence of irregular pulses gives the main shock and aftershocks a less uniform feel.
+  let pulseEnvelope = 0;
+  for (const pulse of quake.pulses) {
+    const distance = (elapsed - pulse.center) / pulse.width;
+    const pulseValue = pulse.strength * Math.exp(-0.5 * distance * distance);
+    pulseEnvelope = Math.max(pulseEnvelope, pulseValue);
+  }
+
+  const carrier = 0.68 + 0.32 * Math.sin(elapsed * quake.waveFrequency * Math.PI * 2 + quake.phase);
+  const tremor = 0.93 + 0.07 * Math.sin(elapsed * quake.waveSpeed + quake.phase * 1.4);
+  const pulseDrive = 0.28 + 0.72 * pulseEnvelope;
+  const intensity = ramp * fade * pulseDrive * carrier * tremor * getMagnitudeScale(quake.magnitude);
+  return THREE.MathUtils.clamp(intensity, 0, 1.1);
 }
 
 function updateEarthquake(delta) {
@@ -744,7 +793,7 @@ const PHYSICS_PROFILES = {
     toppleRateScale: 0.55,
     lateralImpulse: 0.8,
     spinImpulse: 1.4,
-    gravity: 9.0,
+    gravity: 9.81,
     airDrag: 0.18,
     airRotationDrag: 0.12,
     rebound: 0.06,
@@ -760,7 +809,7 @@ const PHYSICS_PROFILES = {
   desk: {
     shakePositionScale: 0.42, shakeRotationScale: 0.35, verticalShakeScale: 0.3,
     toppleThreshold: 2, toppleRateBase: 0, toppleRateScale: 0,
-    lateralImpulse: 0.2, spinImpulse: 0.2, gravity: 9, airDrag: 0.25, airRotationDrag: 0.2,
+    lateralImpulse: 0.2, spinImpulse: 0.2, gravity: 9.81, airDrag: 0.25, airRotationDrag: 0.2,
     rebound: 0, maxRebound: 0, groundFriction: 7, groundRotationFriction: 7,
     linearSettleSq: 0.0025, angularSettleSq: 0.012, settleDuration: 0.22,
     dustScale: 0.3, impactSoundScale: 0.35,
@@ -768,7 +817,7 @@ const PHYSICS_PROFILES = {
   monitor: {
     shakePositionScale: 0.72, shakeRotationScale: 1.25, verticalShakeScale: 0.55,
     toppleThreshold: 0.42, toppleRateBase: 0.035, toppleRateScale: 0.52,
-    lateralImpulse: 0.55, spinImpulse: 1.35, gravity: 9.4, airDrag: 0.22, airRotationDrag: 0.1,
+    lateralImpulse: 0.55, spinImpulse: 1.35, gravity: 9.81, airDrag: 0.22, airRotationDrag: 0.1,
     rebound: 0.045, maxRebound: 0.38, groundFriction: 4.6, groundRotationFriction: 5.8,
     linearSettleSq: 0.0025, angularSettleSq: 0.011, settleDuration: 0.22,
     dustScale: 0.8, impactSoundScale: 0.95,
@@ -776,7 +825,7 @@ const PHYSICS_PROFILES = {
   smallItem: {
     shakePositionScale: 1.85, shakeRotationScale: 1.3, verticalShakeScale: 0.8,
     toppleThreshold: 0.2, toppleRateBase: 0.13, toppleRateScale: 0.78,
-    lateralImpulse: 1.45, spinImpulse: 2.1, gravity: 10.5, airDrag: 0.12, airRotationDrag: 0.08,
+    lateralImpulse: 1.45, spinImpulse: 2.1, gravity: 9.81, airDrag: 0.12, airRotationDrag: 0.08,
     rebound: 0.11, maxRebound: 0.34, groundFriction: 2.8, groundRotationFriction: 3.8,
     linearSettleSq: 0.004, angularSettleSq: 0.018, settleDuration: 0.16,
     dustScale: 0.38, impactSoundScale: 0.32,
@@ -784,7 +833,7 @@ const PHYSICS_PROFILES = {
   officeChair: {
     shakePositionScale: 0.62, shakeRotationScale: 1.45, verticalShakeScale: 0.35,
     toppleThreshold: 0.4, toppleRateBase: 0.02, toppleRateScale: 0.38,
-    lateralImpulse: 1.0, spinImpulse: 1.6, gravity: 9.2, airDrag: 0.2, airRotationDrag: 0.11,
+    lateralImpulse: 1.0, spinImpulse: 1.6, gravity: 9.81, airDrag: 0.2, airRotationDrag: 0.11,
     rebound: 0.02, maxRebound: 0.22, groundFriction: 5.8, groundRotationFriction: 4.3,
     linearSettleSq: 0.003, angularSettleSq: 0.015, settleDuration: 0.3,
     dustScale: 0.72, impactSoundScale: 1.0,
@@ -792,7 +841,7 @@ const PHYSICS_PROFILES = {
   guestChair: {
     shakePositionScale: 0.58, shakeRotationScale: 1.15, verticalShakeScale: 0.3,
     toppleThreshold: 0.4, toppleRateBase: 0.018, toppleRateScale: 0.34,
-    lateralImpulse: 0.72, spinImpulse: 1.25, gravity: 9.2, airDrag: 0.28, airRotationDrag: 0.14,
+    lateralImpulse: 0.72, spinImpulse: 1.25, gravity: 9.81, airDrag: 0.28, airRotationDrag: 0.14,
     rebound: 0.018, maxRebound: 0.18, groundFriction: 6.2, groundRotationFriction: 5.0,
     linearSettleSq: 0.0025, angularSettleSq: 0.012, settleDuration: 0.28,
     dustScale: 0.72, impactSoundScale: 0.9,
@@ -800,7 +849,7 @@ const PHYSICS_PROFILES = {
   plant: {
     shakePositionScale: 1.1, shakeRotationScale: 1.6, verticalShakeScale: 0.7,
     toppleThreshold: 0.25, toppleRateBase: 0.07, toppleRateScale: 0.7,
-    lateralImpulse: 0.78, spinImpulse: 1.1, gravity: 8.2, airDrag: 0.25, airRotationDrag: 0.16,
+    lateralImpulse: 0.78, spinImpulse: 1.1, gravity: 9.81, airDrag: 0.25, airRotationDrag: 0.16,
     rebound: 0.012, maxRebound: 0.14, groundFriction: 3.8, groundRotationFriction: 4.2,
     linearSettleSq: 0.003, angularSettleSq: 0.015, settleDuration: 0.24,
     dustScale: 1.25, impactSoundScale: 0.72,
@@ -808,22 +857,46 @@ const PHYSICS_PROFILES = {
   heater: {
     shakePositionScale: 0.4, shakeRotationScale: 0.55, verticalShakeScale: 0.25,
     toppleThreshold: 0.65, toppleRateBase: 0.008, toppleRateScale: 0.16,
-    lateralImpulse: 0.38, spinImpulse: 0.62, gravity: 9.2, airDrag: 0.35, airRotationDrag: 0.2,
+    lateralImpulse: 0.38, spinImpulse: 0.62, gravity: 9.81, airDrag: 0.35, airRotationDrag: 0.2,
     rebound: 0.008, maxRebound: 0.08, groundFriction: 7.0, groundRotationFriction: 6.5,
     linearSettleSq: 0.002, angularSettleSq: 0.01, settleDuration: 0.32,
     dustScale: 0.5, impactSoundScale: 0.7,
   },
 };
 
+function createCenteredPhysicsPivot(object, label = "PhysicsObject") {
+  if (!object || !object.parent || object.userData?.isPhysicsPivot) return object;
+
+  object.updateWorldMatrix(true, true);
+  const bounds = new THREE.Box3().setFromObject(object);
+  if (bounds.isEmpty()) return object;
+
+  const worldCenter = bounds.getCenter(new THREE.Vector3());
+  const parent = object.parent;
+  parent.updateWorldMatrix(true, false);
+  const localCenter = parent.worldToLocal(worldCenter.clone());
+
+  const pivot = new THREE.Group();
+  pivot.name = object.name || label;
+  pivot.position.copy(localCenter);
+  pivot.userData.isPhysicsPivot = true;
+  parent.add(pivot);
+  pivot.attach(object);
+  return pivot;
+}
+
 function registerPhysicsObject(object, options = {}) {
   if (!object) return;
 
-  const box = new THREE.Box3().setFromObject(object);
-  const basePosition = object.position.clone();
-  const baseRotation = object.rotation.clone();
+  // Center the moving root on the visual bounds so the asset tips around its body,
+  // not around an arbitrary import origin. Object3D.attach preserves its world pose.
+  const physicsRoot = createCenteredPhysicsPivot(object, options.label || object.name);
+  const box = new THREE.Box3().setFromObject(physicsRoot);
+  const basePosition = physicsRoot.position.clone();
+  const baseRotation = physicsRoot.rotation.clone();
   const baseMinOffset = basePosition.y - box.min.y;
 
-  object.userData.physics = {
+  physicsRoot.userData.physics = {
     mass: options.mass ?? 5,
     stability: options.stability ?? 0.6,
     allowTopple: options.allowTopple ?? true,
@@ -849,7 +922,7 @@ function registerPhysicsObject(object, options = {}) {
     seed: Math.random() * Math.PI * 2,
   };
 
-  physicsObjects.push(object);
+  physicsObjects.push(physicsRoot);
 }
 
 function applyObjectShake(intensity, time, delta) {
@@ -1054,6 +1127,12 @@ function applyDamage(object, data, intensity, delta) {
 function markObjectDamaged(object) {
   object.traverse((child) => {
     if (!child.isMesh || !child.material) return;
+    // Clone before tinting so a shared GLB material doesn't darken other objects.
+    if (Array.isArray(child.material)) {
+      child.material = child.material.map((material) => material.clone());
+    } else {
+      child.material = child.material.clone();
+    }
     const mats = Array.isArray(child.material) ? child.material : [child.material];
     mats.forEach((mat) => {
       if (!mat.color) return;
