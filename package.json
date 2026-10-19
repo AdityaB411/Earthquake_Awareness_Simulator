@@ -22,7 +22,8 @@
   "scripts": {
     "dev": "vite --host",
     "build": "vite build",
-    "preview": "vite preview --host"
+    "preview": "vite preview --host",
+    "check": "node --input-type=module --check < main.js && node scripts/validate-project.mjs"
   },
   "dependencies": {
     "lil-gui": "^0.19.2",
