@@ -8,7 +8,7 @@ const source = readFileSync(sourcePath, "utf8");
 const html = readFileSync(htmlPath, "utf8");
 const failures = [];
 
-const htmlIds = [...html.matchAll(/\\bid=["']([^"']+)["']/g)].map((match) => match[1]);
+const htmlIds = [...html.matchAll(/\bid=["']([^"']+)["']/g)].map((match) => match[1]);
 const idCounts = new Map();
 for (const id of htmlIds) idCounts.set(id, (idCounts.get(id) || 0) + 1);
 
@@ -17,15 +17,15 @@ for (const [id, count] of idCounts) {
 }
 
 const referencedIds = new Set(
-  [...source.matchAll(/getElementById\\(\\s*["']([^"']+)["']\\s*\\)/g)].map((match) => match[1])
+  [...source.matchAll(/getElementById\(\s*["']([^"']+)["']\s*\)/g)].map((match) => match[1])
 );
 for (const id of referencedIds) {
   if (!idCounts.has(id)) failures.push(`main.js references missing HTML id: ${id}`);
 }
 
-const assetFiles = new Set([...source.matchAll(/["']([^"']+\\.glb)["']/g)].map((match) => match[1]));
+const assetFiles = new Set([...source.matchAll(/["']([^"']+\.glb)["']/g)].map((match) => match[1]));
 for (const filename of assetFiles) {
-  if (filename.includes("/") || filename.includes("\\\\")) {
+  if (filename.includes("/") || filename.includes("\\")) {
     failures.push(`Expected a local GLB filename, received: ${filename}`);
     continue;
   }
