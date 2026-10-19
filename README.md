@@ -2,7 +2,7 @@
 
 A laptop-friendly, browser-based 3D earthquake-preparedness training prototype adapted from [EarthquakeSim by Furkan Koykiran](https://github.com/furkankoykiran/EarthquakeSim). It uses Three.js and Vite to let a user explore an office, experience a simulated earthquake sequence, practise taking cover, and review a score and decision log.
 
-> **Current status:** this repository is a desktop 3D/WebGL prototype. WebXR/immersive VR support has not yet been implemented. The earthquake motion and object-toppling rules are illustrative game logic, not a scientific ground-motion or structural-engineering model. Use the app for education and demonstration, not as a substitute for official emergency guidance or certified training.
+> **Current status:** this repository is a desktop 3D/WebGL prototype. A first WebXR entry point has been added on the `feature/webxr-foundation` branch; it still needs testing on a compatible immersive browser/headset. The main branch remains the current desktop baseline until the feature branch is reviewed and merged. The earthquake motion and object-toppling rules are illustrative game logic, not a scientific ground-motion or structural-engineering model. Use the app for education and demonstration, not as a substitute for official emergency guidance or certified training.
 
 ## Current features
 
@@ -57,7 +57,7 @@ The container serves the app on port 8080.
 
 ## Known limitations to address before course submission
 
-1. **WebXR is not implemented yet.** The current application uses WebGL and desktop pointer-lock controls. If the assignment title requires WebXR, add WebXR support with a desktop fallback or describe the current version accurately as a browser-based 3D simulator.
+1. **WebXR is not implemented yet.** The current application uses WebGL and desktop pointer-lock controls. The `feature/webxr-foundation` branch enables Three.js WebXR and adds the standard VR entry button. Validate it on a compatible immersive browser/headset before describing immersive mode as tested. Desktop mode remains the fallback.
 2. **Safety behaviour needs review.** The current cover zone is an invisible volume around the desk; the interaction mainly crouches the camera and locks movement rather than simulating a verified Drop, Cover, and Hold On action. The scenario should be checked against official safety guidance before being used as instructional material.
 3. **Physics are approximate.** Event magnitudes/durations and object topple/damage events are generated procedurally. They should not be presented as real earthquake predictions or scientifically accurate structural responses.
 4. **Scoring is heuristic.** The score represents actions inside this prototype, not a validated measure of real-world readiness. The score display reflects a maximum of 180 points under the current scoring rules.
