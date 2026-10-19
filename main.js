@@ -1831,11 +1831,11 @@ function updateXRInterface() {
     if (xrHudPanel) xrHudPanel.visible = false;
     return;
   }
-  const session = renderer.xr.getSession();
-  const hasDomOverlay = Boolean(session && session.domOverlayState);
-  if (xrWelcomePanel) xrWelcomePanel.visible = !hasDomOverlay && ((!timerStarted && !scenarioEnded) || scenarioEnded);
+  if (xrWelcomePanel) {
+    xrWelcomePanel.visible = (!timerStarted && !scenarioEnded) || scenarioEnded;
+  }
   if (!xrHudPanel) return;
-  xrHudPanel.visible = !hasDomOverlay && timerStarted && !scenarioEnded;
+  xrHudPanel.visible = timerStarted && !scenarioEnded;
   if (!xrHudPanel.visible) return;
 
   const statusDiv = document.getElementById("quakeStatus");
