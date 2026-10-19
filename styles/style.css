@@ -354,3 +354,118 @@ body:has(#webxr-vr-button:focus-visible) #webxr-vr-button {
     padding: 18px;
   }
 }
+
+
+/* Scenario configuration and live objective tracking */
+.scenario-settings {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+  max-width: 420px;
+  margin: 0 auto 24px;
+  text-align: left;
+}
+
+.scenario-settings label {
+  font-size: 14px;
+  font-weight: 700;
+  color: #8de0ff;
+}
+
+.scenario-settings select {
+  width: 100%;
+  padding: 11px 12px;
+  border: 1px solid #63718a;
+  border-radius: 8px;
+  background: #10182a;
+  color: #fff;
+  font-size: 15px;
+}
+
+.objective-panel {
+  position: fixed;
+  top: 82px;
+  right: 18px;
+  z-index: 120;
+  width: min(340px, calc(100vw - 36px));
+  padding: 14px;
+  border: 1px solid #00d4ff;
+  border-radius: 12px;
+  background: rgba(5, 12, 26, 0.93);
+  color: #fff;
+  pointer-events: auto;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
+}
+
+.objective-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 10px;
+  color: #8de0ff;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+#objectiveMode {
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.objective-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 9px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.objective-state {
+  flex: 0 0 auto;
+  color: #ffcf70;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.objective-item.is-complete .objective-state {
+  color: #8ee6b3;
+}
+
+.objective-item.is-complete > span:first-child::before {
+  content: "✓ ";
+  color: #8ee6b3;
+}
+
+#scanHazardsBtn {
+  margin-top: 8px;
+  padding: 9px 12px;
+  border: 0;
+  border-radius: 8px;
+  background: #087f8c;
+  color: white;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+#hazardScanResult {
+  margin-top: 8px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #dce4f0;
+}
+
+@media (max-width: 700px) {
+  .objective-panel {
+    top: auto;
+    bottom: 120px;
+    right: 10px;
+    width: min(300px, calc(100vw - 20px));
+    padding: 10px;
+  }
+}
