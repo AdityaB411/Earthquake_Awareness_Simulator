@@ -99,7 +99,7 @@ function onKeyUp(event) {
 }
 
 function handleInteraction(object) {
-  if (object.name === "Door") {
+  if (object.name === "Door" || object.parent?.name === "DoorGroup") {
     toggleDoor();
     return;
   }
@@ -547,6 +547,7 @@ function resetCameraShake() {
 
 function applyCameraShake(intensity, time) {
   if (!camera) return;
+  if (renderer && renderer.xr.isPresenting) return;
 
   camera.position.sub(cameraShake.pos);
   camera.rotation.x -= cameraShake.rot.x;
@@ -949,6 +950,10 @@ function endScenario(result) {
   logText.innerHTML = logHTML;
 
   if (controls) controls.unlock();
+  const objectivePanel = document.getElementById("objectivePanel");
+  if (objectivePanel) objectivePanel.style.display = "none";
+  const hazardScanResult = document.getElementById("hazardScanResult");
+  if (hazardScanResult) hazardScanResult.textContent = "";
 
   lastScenarioReport = {
     totalTime,
@@ -1239,10 +1244,34 @@ function handleXRSelect(controller) {
   const raycaster = new THREE.Raycaster();
   raycaster.setFromXRController(controller);
   const intersections = raycaster.intersectObjects(room.children, true);
-  const hit = intersections.find((intersection) => intersection.distance < 3.0 &&
-    ["Door", "shelterZone", "desk"].includes(intersection.object.name));
-  if (!hit) return;
-  handleInteraction(hit.object);
+  const hit = intersections.find((intersection) => intersection.distance < 3.0);
+  if (!hit) {
+    showMessage("Point at the desk to take cover, or at the door to open it.", 1800);
+    return;
+  }
+
+  let object = hit.object;
+  while (object && object.parent && object.parent !== room &&
+    !["Door", "shelterZone", "desk"].includes(object.name)) {
+    object = object.parent;
+  }
+
+  if (["Door", "shelterZone", "desk"].includes(object?.name)) {
+    handleInteraction(object);
+    return;
+  }
+
+  const physics = hit.object.userData.physics;
+  if (awaitingExit && physics && (physics.toppled || physics.broken)) {
+    const label = physics.label || "Object";
+    const action = "hazard_observed";
+    if (!decisionLog.some((entry) => entry.action === action && entry.description === label)) {
+      logDecision(action, "Inspected hazard: " + label);
+      showMessage("Hazard noted: " + label, 1600);
+    } else {
+      showMessage("You already inspected this hazard.", 1200);
+    }
+  }
 }
 
 function onWindowResize() {
@@ -1950,13 +1979,36 @@ function animate() {
 }
 
 // ----------------- OBJECTIVES AND ROOM TOUR ------------------------
+function scanVisibleHazards() {
+  if (!awaitingExit) {
+    showMessage("Wait until all shaking stops before checking the room for hazards.", 2200);
+    return;
+  }
+  const hazards = physicsObjects.filter((object) => {
+    const data = object.userData.physics;
+    return data && (data.toppled || data.broken);
+  });
+  const names = hazards.map((object) => object.userData.physics.label || object.name || "Object");
+  logDecision("hazard_scan_complete", "Completed post-shaking hazard scan: " + hazards.length + " simulated hazard(s)");
+  const output = document.getElementById("hazardScanResult");
+  if (output) {
+    output.textContent = hazards.length
+      ? "Check these simulated hazards before exiting: " + names.join(", ") + "."
+      : "No toppled or damaged objects were detected by the simulation. Still look around carefully before exiting.";
+  }
+  showMessage(hazards.length ? "Hazard scan complete. Review the checklist." : "Scan complete. Still check your surroundings.", 2200);
+}
+
+document.getElementById("scanHazardsBtn")?.addEventListener("click", scanVisibleHazards);
+
 function updateObjectivePanel() {
   const panel = document.getElementById("objectivePanel");
   if (!panel) return;
   const objectives = [
     { id: "objectiveCover", complete: coverUsed },
     { id: "objectiveHold", complete: coverTimeTotal >= 3 },
-    { id: "objectiveExit", complete: scenarioEnded && awaitingExit === false && lastScenarioReport?.resultText?.includes("completed") },
+    { id: "objectiveScan", complete: decisionLog.some((entry) => entry.action === "hazard_scan_complete") },
+    { id: "objectiveExit", complete: scenarioEnded && lastScenarioReport?.resultText?.includes("completed") },
   ];
   objectives.forEach((objective) => {
     const item = document.getElementById(objective.id);
