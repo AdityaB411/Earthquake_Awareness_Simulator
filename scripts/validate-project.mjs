@@ -6,7 +6,15 @@ const sourcePath = resolve(root, "main.js");
 const htmlPath = resolve(root, "index.html");
 const source = readFileSync(sourcePath, "utf8");
 const html = readFileSync(htmlPath, "utf8");
+const packageJson = JSON.parse(readFileSync(resolve(root, "package.json"), "utf8"));
 const failures = [];
+
+for (const scriptName of ["dev", "preview"]) {
+  const command = packageJson.scripts?.[scriptName] || "";
+  if (/\\s--host(?:\\s|$)/.test(command)) {
+    failures.push(`The ${scriptName} script overrides the local-only Vite host: ${command}`);
+  }
+}
 
 const htmlIds = [...html.matchAll(/\bid=["']([^"']+)["']/g)].map((match) => match[1]);
 const idCounts = new Map();
